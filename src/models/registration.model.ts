@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-use-before-define */
+/* eslint-disable default-case */
 import db from '@/database/neon.db';
 import { registrations, activities, users } from '@/schema/db.schema';
 import { and, eq, sql, desc, asc } from 'drizzle-orm';
@@ -662,3 +664,244 @@ export async function rejectRegistration(registrationId: number) {
 //     message: `Bulk ${action} completed successfully`
 //   };
 // }
+
+// ====================
+//  10. 报名统计
+// ====================
+export async function getRegistrationAnalytics(activityId: number) {
+  // 1. 获取活动信息
+  const [activity] = await db.select({
+    id: activities.id,
+    title: activities.title,
+    capacity: activities.capacity
+  })
+    .from(activities)
+    .where(eq(activities.id, activityId));
+
+  if (!activity) {
+    throw new Error('Activity not found');
+  }
+
+  // 2. 获取各状态的报名统计
+  const statusStats = await db.select({
+    status: registrations.status,
+    count: sql<number>`cast(count(*) as integer)`
+  })
+    .from(registrations)
+    .where(eq(registrations.activityId, activityId))
+    .groupBy(registrations.status);
+
+  // 3. 计算各状态人数
+  const stats = {
+    total: 0,
+    approved: 0,
+    pending: 0,
+    rejected: 0,
+    cancelled: 0,
+    waitlist: 0,
+    attended: 0,
+    absent: 0
+  };
+
+  statusStats.forEach(({ status, count }) => {
+    stats.total += count;
+    switch (status) {
+      case RegistrationStatus.APPROVED:
+        stats.approved = count;
+        break;
+      case RegistrationStatus.PENDING:
+        stats.pending = count;
+        break;
+      case RegistrationStatus.REJECTED:
+        stats.rejected = count;
+        break;
+      case RegistrationStatus.CANCELLED:
+        stats.cancelled = count;
+        break;
+      case RegistrationStatus.WAITLIST:
+        stats.waitlist = count;
+        break;
+      case RegistrationStatus.ATTENDED:
+        stats.attended = count;
+        break;
+      case RegistrationStatus.ABSENT:
+        stats.absent = count;
+        break;
+    }
+  });
+
+  // 4. 计算比率
+  const rates = {
+    approvalRate: stats.total > 0 ? (stats.approved / stats.total * 100).toFixed(2) : '0.00',
+    attendanceRate: stats.approved > 0 ? (stats.attended / stats.approved * 100).toFixed(2) : '0.00',
+    capacityUsage: activity.capacity > 0 ? (stats.approved / activity.capacity * 100).toFixed(2) : '100.00'
+  };
+
+  return {
+    activityId,
+    activityTitle: activity.title,
+    capacity: activity.capacity,
+    stats,
+    rates
+  };
+}
+
+// ====================
+//  11. 参与情况统计
+// ====================
+export async function getParticipationAnalytics(activityId: number) {
+  // 1. 获取活动信息
+  const [activity] = await db.select({
+    id: activities.id,
+    title: activities.title,
+    startTime: activities.startTime,
+    endTime: activities.endTime
+  })
+    .from(activities)
+    .where(eq(activities.id, activityId));
+
+  if (!activity) {
+    throw new Error('Activity not found');
+  }
+
+  // 2. 获取参与情况统计
+  const participationStats = {
+    registered: await getRegistrationCount(activityId),
+    attended: await getAttendanceCount(activityId),
+    absent: await getAbsentCount(activityId),
+    cancelled: await getCancelledCount(activityId)
+  };
+
+  // 3. 计算参与率
+  const rates = {
+    attendanceRate: participationStats.registered > 0
+      ? (participationStats.attended / participationStats.registered * 100).toFixed(2)
+      : '0.00',
+    absentRate: participationStats.registered > 0
+      ? (participationStats.absent / participationStats.registered * 100).toFixed(2)
+      : '0.00',
+    cancellationRate: participationStats.registered > 0
+      ? (participationStats.cancelled / participationStats.registered * 100).toFixed(2)
+      : '0.00'
+  };
+
+  return {
+    activityId,
+    activityTitle: activity.title,
+    startTime: activity.startTime,
+    endTime: activity.endTime,
+    stats: participationStats,
+    rates
+  };
+}
+
+// 辅助函数：获取总报名人数
+async function getRegistrationCount(activityId: number): Promise<number> {
+  const [{ count }] = await db.select({
+    count: sql<number>`cast(count(*) as integer)`
+  })
+    .from(registrations)
+    .where(eq(registrations.activityId, activityId));
+  return count;
+}
+
+// 辅助函数：获取实际参与人数
+async function getAttendanceCount(activityId: number): Promise<number> {
+  const [{ count }] = await db.select({
+    count: sql<number>`cast(count(*) as integer)`
+  })
+    .from(registrations)
+    .where(
+      and(
+        eq(registrations.activityId, activityId),
+        eq(registrations.status, RegistrationStatus.ATTENDED)
+      )
+    );
+  return count;
+}
+
+// 辅助函数：获取缺席人数
+async function getAbsentCount(activityId: number): Promise<number> {
+  const [{ count }] = await db.select({
+    count: sql<number>`cast(count(*) as integer)`
+  })
+    .from(registrations)
+    .where(
+      and(
+        eq(registrations.activityId, activityId),
+        eq(registrations.status, RegistrationStatus.ABSENT)
+      )
+    );
+  return count;
+}
+
+// 辅助函数：获取取消报名人数
+async function getCancelledCount(activityId: number): Promise<number> {
+  const [{ count }] = await db.select({
+    count: sql<number>`cast(count(*) as integer)`
+  })
+    .from(registrations)
+    .where(
+      and(
+        eq(registrations.activityId, activityId),
+        eq(registrations.status, RegistrationStatus.CANCELLED)
+      )
+    );
+  return count;
+}
+
+// ====================
+//  12. 活动状态统计
+// ====================
+export async function getActivityStatusAnalytics() {
+  // 1. 获取所有活动的状态统计
+  const activityStats = await db.select({
+    status: activities.status,
+    count: sql<number>`cast(count(*) as integer)`
+  })
+    .from(activities)
+    .groupBy(activities.status);
+
+  // 2. 统计各状态活动数量
+  const stats = {
+    total: 0,
+    draft: 0,      // 草稿
+    published: 0,   // 已发布
+    cancelled: 0,   // 已取消
+    completed: 0,   // 已结束
+    ongoing: 0      // 进行中
+  };
+
+  activityStats.forEach(({ status, count }) => {
+    stats.total += count;
+    switch (status) {
+      case 1: // DRAFT
+        stats.draft = count;
+        break;
+      case 2: // PUBLISHED
+        stats.published = count;
+        break;
+      case 3: // CANCELLED
+        stats.cancelled = count;
+        break;
+      case 4: // COMPLETED
+        stats.completed = count;
+        break;
+      case 5: // ONGOING
+        stats.ongoing = count;
+        break;
+    }
+  });
+
+  // 3. 计算比率
+  const rates = {
+    publishRate: stats.total > 0 ? (stats.published / stats.total * 100).toFixed(2) : '0.00',
+    cancelRate: stats.total > 0 ? (stats.cancelled / stats.total * 100).toFixed(2) : '0.00',
+    completionRate: stats.published > 0 ? (stats.completed / stats.published * 100).toFixed(2) : '0.00'
+  };
+
+  return {
+    stats,
+    rates
+  };
+}

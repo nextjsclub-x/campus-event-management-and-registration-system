@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { post } from '@/utils/request/request';
+import { APIStatusCode } from '@/schema/api-response.schema';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -20,11 +22,15 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // TODO: 实现注册逻辑
-      console.log('注册:', { email, password, name });
-      router.push('/login');
-    } catch (error) {
+      const response = await post('/api/sign-up', { email, password, name });
+      if (response.code === APIStatusCode.CREATED) {
+        router.push('/login');
+      } else {
+        alert(response.message || '注册失败，请重试');
+      }
+    } catch (error: any) {
       console.error('注册失败:', error);
+      alert(error.message || '注册失败，请重试');
     } finally {
       setLoading(false);
     }

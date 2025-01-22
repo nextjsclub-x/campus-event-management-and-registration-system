@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { register } from '@/models/userl.model';
 import { APIStatusCode, APIJsonResponse } from '@/schema/api-response.schema';
 
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     const { email, password, name, role } = await request.json();
@@ -39,7 +41,7 @@ export async function POST(request: NextRequest) {
     // 其他未预期的错误
     const res: APIJsonResponse = {
       code: APIStatusCode.INTERNAL_SERVER_ERROR,
-      message: '注册过程中发生错误',
+      message: `注册过程中发生错误: ${error.message}`,
       data: null
     };
     return NextResponse.json(res);

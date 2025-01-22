@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { login } from '@/models/userl.model';
 import { APIStatusCode, APIJsonResponse } from '@/schema/api-response.schema';
 
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();

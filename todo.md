@@ -20,12 +20,12 @@
 
 ## 2. 活动基础功能 (activity.ts)
 - [x] 活动创建
-  - [x] 创建活动 `createActivity(organizerId, activityData)`
-  - [x] 更新活动 `updateActivity(activityId, activityData)`
+  - [x] 创建活动 `createActivity(organizerId, activityData: { title, description, startTime, endTime, location, capacity, categoryId })`
+  - [x] 更新活动 `updateActivity(activityId, activityData: { title?, description?, startTime?, endTime?, location?, capacity?, categoryId? })`
   - [x] 删除活动 `deleteActivity(activityId)`
 - [x] 活动查询
   - [x] 获取单个活动 `getActivity(activityId)`
-  - [x] 活动列表查询 `listActivities(filters, pagination)`
+  - [x] 活动列表查询 `listActivities(filters: { status?, categoryId?, startTime?, endTime? }, pagination)`
   - [x] 活动状态查询 `getActivityStatus(activityId)`
 - [x] 活动状态管理
   - [x] 发布活动 `publishActivity(activityId)`
@@ -47,30 +47,30 @@
   - [x] 批量审核 `bulkProcessRegistrations(registrationIds, action)`
 
 ## 4. 活动分类管理 (category.ts)
-- [ ] 分类管理
-  - [ ] 获取分类列表 `getCategories()`
-  - [ ] 创建分类 `createCategory(categoryData)`
-  - [ ] 更新分类 `updateCategory(categoryId, categoryData)`
-- [ ] 分类关联
-  - [ ] 获取分类活动 `getActivitiesByCategory(categoryId)`
-  - [ ] 活动分类设置 `setActivityCategory(activityId, categoryId)`
-  - [ ] 分类活动统计 `getCategoryStats(categoryId)`
+- [x] 分类管理
+  - [x] 获取分类列表 `getCategories()`
+  - [x] 创建分类 `createCategory(categoryData)`
+  - [x] 更新分类 `updateCategory(categoryId, categoryData)`
+- [x] 分类关联
+  - [x] 获取分类活动 `getActivitiesByCategory(categoryId)`
+  - [x] 活动分类设置 `setActivityCategory(activityId, categoryId)`
+  - [x] 分类活动统计 `getCategoryStats(categoryId)`
 
 ## 5. 数据统计 (analytics.ts)
-- [ ] 活动统计
-  - [ ] 报名统计 `getRegistrationAnalytics(activityId)`
-  - [ ] 参与情况统计 `getParticipationAnalytics(activityId)`
-  - [ ] 活动状态统计 `getActivityStatusAnalytics()`
-- [ ] 用户统计
-  - [ ] 用户活动统计 `getUserActivityAnalytics(userId)`
-  - [ ] 用户报名统计 `getUserRegistrationAnalytics(userId)`
+- [x] 活动统计
+  - [x] 报名统计 `getRegistrationAnalytics(activityId)`
+  - [x] 参与情况统计 `getParticipationAnalytics(activityId)`
+  - [x] 活动状态统计 `getActivityStatusAnalytics()`
+- [x] 用户统计
+  - [x] 用户活动统计 `getUserActivityAnalytics(userId)`
+  - [x] 用户报名统计 `getUserRegistrationAnalytics(userId)`
 
 ## 6. 通知系统 (notification.ts)
-- [ ] 系统通知
-  - [ ] 创建通知 `createNotification(userId, activityId, message)`
-  - [ ] 获取用户通知 `getUserNotifications(userId)`
-  - [ ] 标记通知已读 `markNotificationAsRead(notificationId)`
-- [ ] 邮件通知
-  - [ ] 活动提醒 `sendActivityReminder(activityId)`
-  - [ ] 报名确认 `sendRegistrationConfirmation(registrationId)`
-  - [ ] 审核结果通知 `sendReviewNotification(registrationId)`
+- [x] 系统通知
+  - [x] 创建通知 `createNotification(userId, activityId, message)`
+  - [x] 获取用户通知 `getUserNotifications(userId)`
+  - [x] 标记通知已读 `markNotificationAsRead(notificationId)`
+- [x] 邮件通知
+  - [x] 活动提醒 `sendActivityReminder(activityId)`
+  - [x] 报名确认 `sendRegistrationConfirmation(registrationId)`
+  - [x] 审核结果通知 `sendReviewNotification(registrationId)

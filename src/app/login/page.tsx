@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { post } from '@/utils/request/request';
+import { APIStatusCode } from '@/schema/api-response.schema';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,11 +21,17 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // TODO: 实现登录逻辑
-      console.log('登录:', { email, password });
-      router.push('/');
-    } catch (error) {
+      const response = await post('/api/sign-in', { email, password });
+      if (response.code === APIStatusCode.OK) {
+        // 登录成功，保存token并跳转到首页
+        localStorage.setItem('token', response.data.token);
+        router.push('/');
+      } else {
+        alert(response.message || '登录失败，请重试');
+      }
+    } catch (error: any) {
       console.error('登录失败:', error);
+      alert(error.message || '登录失败，请重试');
     } finally {
       setLoading(false);
     }

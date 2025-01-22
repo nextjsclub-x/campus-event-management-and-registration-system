@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS "activities" (
     "organizer_id" BIGINT NOT NULL,
     "title" VARCHAR(255) NOT NULL,
     "description" TEXT NOT NULL,
-    "category" VARCHAR(50) NOT NULL,
+    "category_id" BIGINT NOT NULL,
     "location" VARCHAR(255) NOT NULL,
     "start_time" TIMESTAMP NOT NULL,
     "end_time" TIMESTAMP NOT NULL,
@@ -122,6 +122,28 @@ EXECUTE FUNCTION set_timestamp();
 
 -- 如果你也想为 registrations / notifications / feedback 添加自动更新时间，
 -- 请先在对应表里添加 updated_at 字段，再重复以上触发器的创建即可。
+
+-- =============================
+-- 8. 创建表：categories
+-- =============================
+CREATE TABLE IF NOT EXISTS "categories" (
+    "id" BIGSERIAL PRIMARY KEY,
+    "name" VARCHAR(50) NOT NULL UNIQUE,
+    "description" TEXT,
+    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "status" SMALLINT NOT NULL DEFAULT 1
+);
+
+-- 为分类名称创建索引（虽然有唯一约束会自动创建，但显式创建更清晰）
+CREATE INDEX IF NOT EXISTS idx_categories_name
+    ON "categories" ("name");
+
+-- 创建categories表的更新时间触发器
+CREATE TRIGGER categories_update_timestamp
+BEFORE UPDATE ON "categories"
+FOR EACH ROW
+EXECUTE FUNCTION set_timestamp();
 
 -- =============================
 -- 至此，所有表和必要的触发器已创建完成
