@@ -1,76 +1,46 @@
-# 活动管理系统功能清单
+# 校园活动管理与报名系统 - 功能清单
 
-## 1. 用户管理模块 (auth.ts)
-- [x] 用户注册
-  - [x] 邮箱注册 `register(email, password, name, role)`
-  - [x] 密码加密存储 `generatePasswordHash(password)`
-  - [x] 密码验证 `verifyPassword(plainPassword, storedHash)`
-- [x] 用户登录
-  - [x] 邮箱登录 `login(email, password)`
-  - [x] JWT token 生成与验证 `validateToken(token)`
-  - [x] 登录状态检查 `checkPermission(userId, action)`
-- [x] 用户信息管理
-  - [x] 修改密码 `changePassword(userId, oldPassword, newPassword)`
-  - [x] 更新个人信息 `updateUserProfile(userId, profile)`
-  - [x] 查询用户信息 `getUserById(id)`
-- [x] 管理员功能
-  - [x] 用户列表查询 `listUsers(filters, pagination)`
-  - [x] 用户状态管理 `setUserStatus(userId, status)`
-  - [x] 用户角色设置 `setUserRole(userId, role)`
+## ✅ 已完成功能
 
-## 2. 活动基础功能 (activity.ts)
-- [x] 活动创建
-  - [x] 创建活动 `createActivity(organizerId, activityData: { title, description, startTime, endTime, location, capacity, categoryId })`
-  - [x] 更新活动 `updateActivity(activityId, activityData: { title?, description?, startTime?, endTime?, location?, capacity?, categoryId? })`
-  - [x] 删除活动 `deleteActivity(activityId)`
-- [x] 活动查询
-  - [x] 获取单个活动 `getActivity(activityId)`
-  - [x] 活动列表查询 `listActivities(filters: { status?, categoryId?, startTime?, endTime? }, pagination)`
-  - [x] 活动状态查询 `getActivityStatus(activityId)`
-- [x] 活动状态管理
-  - [x] 发布活动 `publishActivity(activityId)`
-  - [x] 取消发布 `unpublishActivity(activityId)`
-  - [x] 更新状态 `updateActivityStatus(activityId, status)`
+### 用户管理模块
 
-## 3. 报名管理 (registration.ts)
-- [x] 报名操作
-  - [x] 创建报名 `registerActivity(userId, activityId)`
-  - [x] 取消报名 `cancelRegistration(userId, activityId)`
-  - [x] 查询报名状态 `getRegistrationStatus(userId, activityId)`
-- [x] 报名管理
-  - [x] 获取活动报名列表 `getActivityRegistrations(activityId)`
-  - [x] 获取用户报名列表 `getUserRegistrations(userId)`
-  - [x] 检查报名人数 `checkRegistrationCapacity(activityId)`
-- [x] 报名审核
-  - [x] 审核报名 `approveRegistration(registrationId)`
-  - [x] 拒绝报名 `rejectRegistration(registrationId)`
-  - [x] 批量审核 `bulkProcessRegistrations(registrationIds, action)`
+- [x] 用户登录功能（JWT认证）
+- [x] 管理员权限管理
+- [x] 学生注册功能
+- [x] 用户个人信息管理
 
-## 4. 活动分类管理 (category.ts)
-- [x] 分类管理
-  - [x] 获取分类列表 `getCategories()`
-  - [x] 创建分类 `createCategory(categoryData)`
-  - [x] 更新分类 `updateCategory(categoryId, categoryData)`
-- [x] 分类关联
-  - [x] 获取分类活动 `getActivitiesByCategory(categoryId)`
-  - [x] 活动分类设置 `setActivityCategory(activityId, categoryId)`
-  - [x] 分类活动统计 `getCategoryStats(categoryId)`
+### 活动管理模块
 
-## 5. 数据统计 (analytics.ts)
-- [x] 活动统计
-  - [x] 报名统计 `getRegistrationAnalytics(activityId)`
-  - [x] 参与情况统计 `getParticipationAnalytics(activityId)`
-  - [x] 活动状态统计 `getActivityStatusAnalytics()`
-- [x] 用户统计
-  - [x] 用户活动统计 `getUserActivityAnalytics(userId)`
-  - [x] 用户报名统计 `getUserRegistrationAnalytics(userId)`
+- [x] 活动创建与编辑
+- [x] 活动列表展示
+- [x] 活动详情页面
+- [x] 活动状态管理（草稿、发布、取消等）
+- [x] 报名功能
+- [x] 报名审核功能
+- [x] 报名人数限制
+- [x] 报名状态管理（待审核、已通过、已拒绝等）
+- [x] 活动分类功能
+- [x] 活动筛选功能（按状态、分类等）
+- [x] 活动搜索功能（标题关键词）
+- [x] 活动临近提醒
 
-## 6. 通知系统 (notification.ts)
-- [x] 系统通知
-  - [x] 创建通知 `createNotification(userId, activityId, message)`
-  - [x] 获取用户通知 `getUserNotifications(userId)`
-  - [x] 标记通知已读 `markNotificationAsRead(notificationId)`
-- [x] 邮件通知
-  - [x] 活动提醒 `sendActivityReminder(activityId)`
-  - [x] 报名确认 `sendRegistrationConfirmation(registrationId)`
-  - [x] 审核结果通知 `sendReviewNotification(registrationId)
+### 数据统计与分析
+
+- [x] 基本的报名人数统计
+- [x] 报名记录查看
+- [x] 用户活跃度统计
+
+### 已实现的技术栈
+
+- [x] Next.js 框架
+- [x] React Hooks
+- [x] Tailwind CSS
+- [x] PostgreSQL 数据库
+- [x] JWT 认证
+- [x] RESTful API
+
+## ❌ 待实现功能
+
+### 通知系统
+
+- [ ] 实时通知与推送功能

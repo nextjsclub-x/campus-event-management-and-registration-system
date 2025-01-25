@@ -1,4 +1,7 @@
+'use client';
+
 import { APIJsonResponse } from '@/schema/api-response.schema';
+import { useUserStore } from '@/store/user';
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
@@ -19,7 +22,7 @@ class RequestError extends Error {
 
 const getToken = () => {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('token');
+    return useUserStore.getState().token;
   }
   return null;
 };

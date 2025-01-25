@@ -905,3 +905,82 @@ export async function getActivityStatusAnalytics() {
     rates
   };
 }
+
+// 获取活动的已批准报名人数
+export async function getApprovedRegistrationCount(activityId: number): Promise<number> {
+  const [{ count }] = await db.select({
+    count: sql<number>`cast(count(*) as integer)`
+  })
+    .from(registrations)
+    .where(
+      and(
+        eq(registrations.activityId, activityId),
+        eq(registrations.status, 2) // 只统计已批准的
+      )
+    );
+  
+  return count;
+}
+
+// ====================
+//  更新报名状态
+// ====================
+export async function updateRegistrationStatus(registrationId: number, newStatus: number, operatorId: number) {
+  // 1. 检查报名记录是否存在
+  const [registration] = await db.select({
+    id: registrations.id,
+    userId: registrations.userId,
+    activityId: registrations.activityId,
+    status: registrations.status
+  })
+    .from(registrations)
+    .where(eq(registrations.id, registrationId));
+
+  if (!registration) {
+    throw new Error('报名记录不存在');
+  }
+
+  // 2. 检查新状态是否有效
+  const validStatuses = [
+    RegistrationStatus.CANCELLED,
+    RegistrationStatus.PENDING,
+    RegistrationStatus.APPROVED,
+    RegistrationStatus.REJECTED,
+    RegistrationStatus.WAITLIST,
+    RegistrationStatus.ATTENDED,
+    RegistrationStatus.ABSENT
+  ] as number[];
+
+  if (!validStatuses.includes(newStatus)) {
+    throw new Error('无效的状态值');
+  }
+
+  // 3. 检查操作权限
+  // 获取活动信息以验证操作者是否为活动组织者
+  const [activity] = await db.select({
+    organizerId: activities.organizerId
+  })
+    .from(activities)
+    .where(eq(activities.id, registration.activityId));
+
+  if (!activity) {
+    throw new Error('活动不存在');
+  }
+
+  // 只有活动组织者或报名者本人可以更新状态
+  if (operatorId !== activity.organizerId && operatorId !== registration.userId) {
+    const error = new Error('没有权限执行此操作');
+    (error as any).status = 403;
+    throw error;
+  }
+
+  // 4. 更新状态
+  const [updatedRegistration] = await db.update(registrations)
+    .set({
+      status: newStatus
+    })
+    .where(eq(registrations.id, registrationId))
+    .returning();
+
+  return updatedRegistration;
+}

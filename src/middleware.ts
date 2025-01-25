@@ -1,67 +1,55 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import * as UserModel from '@/models/userl.model';
+import { verifyToken } from '@/utils/jwt/token-utils';
+import { APIStatusCode } from '@/schema/api-response.schema';
+
+// 定义公开路由白名单
+const PUBLIC_ROUTES = [
+  '/api/sign-up',
+  '/api/sign-in',
+  '/api/category'
+] as const;
 
 export async function middleware(request: NextRequest) {
-  // 1. 不需要验证的路由
-  if (request.nextUrl.pathname === '/api/user' && request.method === 'POST') {
-    return NextResponse.next();
-  }
-  if (request.nextUrl.pathname === '/api/user/login') {
+  const {pathname} = request.nextUrl;
+  console.log('当前访问路径:', pathname);
+
+  // 检查是否为公开路由
+  if (PUBLIC_ROUTES.includes(pathname as any)) {
+    console.log('当前为公开路由，无需验证');
     return NextResponse.next();
   }
 
-  // 2. 获取并验证token
-  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
+  // 获取token（优先从cookie获取，其次从Authorization header获取）
+  let token = request.cookies.get('token')?.value;
+  console.log('从cookie中获取的token:', token);
+
   if (!token) {
-    return NextResponse.json(
-      { error: '未登录' },
-      { status: 401 }
-    );
+    token = request.headers.get('Authorization')?.replace('Bearer ', '');
+    console.log('从Authorization header中获取的token:', token);
+  }
+
+  if (!token) {
+    console.log('未找到token，用户未登录');
+    return NextResponse.json({
+      code: APIStatusCode.UNAUTHORIZED,
+      message: '未登录',
+      data: null
+    });
   }
 
   try {
-    // 3. 验证token
-    const decoded = UserModel.validateToken(token) as any;
-    const { userId, role } = decoded;
+    // 验证token
+    const decoded = await verifyToken(token);
+    const { id, role } = decoded;
+    const userId = typeof id === 'string' ? parseInt(id, 10) : id;
+    console.log('解析出的用户信息:', { userId, role });
 
-    // 4. 检查权限
-    // 管理员接口
-    if (request.nextUrl.pathname.includes('/admin')) {
-      if (role !== 'admin') {
-        return NextResponse.json(
-          { error: '需要管理员权限' },
-          { status: 403 }
-        );
-      }
-    }
-
-    // 获取用户列表
-    if (request.nextUrl.pathname === '/api/user' && request.method === 'GET') {
-      if (role !== 'admin') {
-        return NextResponse.json(
-          { error: '需要管理员权限' },
-          { status: 403 }
-        );
-      }
-    }
-
-    // 用户操作自己的数据
-    const pathMatch = request.nextUrl.pathname.match(/\/api\/user\/(\d+)/);
-    if (pathMatch) {
-      const targetUserId = parseInt(pathMatch[1], 10);
-      if (targetUserId !== userId && role !== 'admin') {
-        return NextResponse.json(
-          { error: '无权操作其他用户数据' },
-          { status: 403 }
-        );
-      }
-    }
-
-    // 5. 验证通过
+    // 将用户信息添加到请求头
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('X-User-Id', userId.toString());
-    requestHeaders.set('X-User-Role', role);
+    requestHeaders.set('X-User-Role', role as string);
+    console.log('已将用户信息添加到请求头:', { 'X-User-Id': userId.toString(), 'X-User-Role': role });
 
     return NextResponse.next({
       request: {
@@ -69,14 +57,18 @@ export async function middleware(request: NextRequest) {
       }
     });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: '无效的token' },
-      { status: 401 }
-    );
+    console.log('token验证失败:', error.message);
+    return NextResponse.json({
+      code: APIStatusCode.INVALID_TOKEN,
+      message: '无效的token',
+      data: null
+    });
   }
 }
 
 // 配置需要中间件处理的路由
 export const config = {
-  matcher: '/api/user/:path*'
+  matcher: [
+    '/api/:path*'
+  ]
 };

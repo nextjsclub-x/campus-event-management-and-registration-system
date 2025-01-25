@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
     // 调用model层的login方法进行验证并获取token
     const { token, userId, role } = await login(email, password);
 
+    // 创建响应对象
     const res: APIJsonResponse = {
       code: APIStatusCode.OK,
       message: '登录成功',
@@ -30,7 +31,21 @@ export async function POST(request: NextRequest) {
         role
       }
     };
-    return NextResponse.json(res);
+
+    // 创建响应并设置cookie
+    const response = NextResponse.json(res);
+    
+    // 设置httpOnly cookie，过期时间365天
+    response.cookies.set({
+      name: 'token',
+      value: token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365 // 365天
+    });
+
+    return response;
   } catch (error: any) {
     // 处理特定错误
     if (error.message === 'User not found' || error.message === 'Invalid credentials') {

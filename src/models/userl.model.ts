@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/default-param-last */
 import db from '@/database/neon.db';
 import { users } from '@/schema/db.schema';
 import { and, eq, sql } from 'drizzle-orm';
@@ -144,7 +145,7 @@ interface Pagination {
   pageSize?: number; // 每页多少条
 }
 
-export async function listUsers(filters: ListUsersFilter, pagination: Pagination) {
+export async function listUsers(filters: ListUsersFilter = {}, pagination: Pagination) {
   const { status, role } = filters;
   const { page = 1, pageSize = 10 } = pagination;
   const offset = (page - 1) * pageSize;
@@ -205,6 +206,18 @@ export async function setUserRole(userId: number, role: string) {
     .where(eq(users.id, userId));
 
   return { message: 'User role updated successfully' };
+}
+
+/**
+ * 更新用户名
+ */
+export async function updateUserName(userId: number, name: string) {
+  await db.update(users)
+    .set({ 
+      name,
+      updatedAt: new Date()
+    })
+    .where(eq(users.id, userId));
 }
 
 // ====================

@@ -9,6 +9,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { post } from '@/utils/request/request';
 import { APIStatusCode } from '@/schema/api-response.schema';
+import { useUserStore } from '@/store/user';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,8 +24,8 @@ export default function LoginPage() {
     try {
       const response = await post('/api/sign-in', { email, password });
       if (response.code === APIStatusCode.OK) {
-        // 登录成功，保存token并跳转到首页
-        localStorage.setItem('token', response.data.token);
+        // 登录成功，保存token到 zustand store 并跳转到首页
+        useUserStore.getState().setToken(response.data.token);
         router.push('/');
       } else {
         alert(response.message || '登录失败，请重试');

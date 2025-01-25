@@ -1,17 +1,17 @@
 import db from '@/database/neon.db';
-import { activities } from '@/schema/db.schema';
+import { activities , registrations } from '@/schema/db.schema';
 import { eq, and, desc, asc, sql, type SQL } from 'drizzle-orm';
 
 // 活动状态常量
 export const ActivityStatus = {
   DELETED: 0,     // 已删除
-  DRAFT: 1,       // 草稿（默认状态）
+  DRAFT: 1,       // 草稿
   PUBLISHED: 2,   // 已发布
   CANCELLED: 3,   // 已取消
-  COMPLETED: 4,   // 已结束
+  COMPLETED: 4,   // 已完成
 } as const;
 
-type ActivityStatusType = typeof ActivityStatus[keyof typeof ActivityStatus];
+export type ActivityStatusType = typeof ActivityStatus[keyof typeof ActivityStatus];
 
 // 使用drizzle的类型推导
 type Activity = typeof activities.$inferSelect;
@@ -21,17 +21,30 @@ type NewActivity = typeof activities.$inferInsert;
 //  1. 获取单个活动
 // ====================
 export async function getActivity(activityId: number) {
+  // 1. 获取活动基本信息
   const [activity] = await db.select().from(activities)
-    .where(and(
-      eq(activities.id, activityId),
-      eq(activities.status, ActivityStatus.PUBLISHED) // 只获取已发布的活动
-    ));
+    .where(eq(activities.id, activityId));
 
   if (!activity) {
     throw new Error('Activity not found');
   }
 
-  return activity;
+  // 2. 获取已批准的报名人数
+  const [{ count }] = await db.select({
+    count: sql<number>`cast(count(*) as integer)`
+  })
+    .from(registrations)
+    .where(
+      and(
+        eq(registrations.activityId, activityId),
+        eq(registrations.status, 2) // 只统计已批准的
+      )
+    );
+
+  return {
+    ...activity,
+    currentRegistrations: count
+  };
 }
 
 // ====================
@@ -65,6 +78,7 @@ export async function createActivity(organizerId: number, activityData: {
       endTime: activities.endTime,
       capacity: activities.capacity,
       status: activities.status,
+
       createdAt: activities.createdAt,
       updatedAt: activities.updatedAt
     });
@@ -173,7 +187,7 @@ export async function listActivities(filters: {
   order?: 'asc' | 'desc';
 }) {
   const {
-    status = ActivityStatus.PUBLISHED,
+    status,
     categoryId,
     startTime,
     endTime,
@@ -184,7 +198,11 @@ export async function listActivities(filters: {
   } = filters;
 
   // 1. 构建查询条件
-  const conditions = [eq(activities.status, status)];
+  const conditions = [];
+  
+  if (status !== undefined) {
+    conditions.push(eq(activities.status, status));
+  }
   
   if (categoryId) {
     conditions.push(eq(activities.categoryId, categoryId));
@@ -204,7 +222,18 @@ export async function listActivities(filters: {
   const offset = (page - 1) * pageSize;
 
   // 3. 执行查询
-  const activityList = await db.select()
+  const activityList = await db.select({
+    id: activities.id,
+    title: activities.title,
+    description: activities.description,
+    startTime: activities.startTime,
+    endTime: activities.endTime,
+    location: activities.location,
+    capacity: activities.capacity,
+    status: activities.status,
+    createdAt: activities.createdAt,
+    updatedAt: activities.updatedAt,
+  })
     .from(activities)
     .where(and(...conditions))
     .orderBy(orderExpr)
@@ -237,18 +266,13 @@ export async function updateActivityStatus(
   organizerId: number,
   newStatus: ActivityStatusType
 ) {
-  // 1. 检查活动是否存在且属于该组织者
+  // 1. 检查活动是否存在
   const [existingActivity] = await db.select()
     .from(activities)
-    .where(
-      and(
-        eq(activities.id, activityId),
-        eq(activities.organizerId, organizerId)
-      )
-    );
+    .where(eq(activities.id, activityId));
 
   if (!existingActivity) {
-    throw new Error('Activity not found or you do not have permission to update it');
+    throw new Error('Activity not found');
   }
 
   // 2. 验证状态转换的合法性
@@ -293,4 +317,37 @@ export async function publishActivity(activityId: number, organizerId: number) {
 // ====================
 export async function unpublishActivity(activityId: number, organizerId: number) {
   return updateActivityStatus(activityId, organizerId, ActivityStatus.CANCELLED);
+}
+
+/**
+ * 获取用户发起的活动列表
+ */
+export async function getActivitiesByOrganizer(organizerId: number) {
+  const result = await db
+    .select({
+      id: activities.id,
+      title: activities.title,
+      description: activities.description,
+      location: activities.location,
+      startTime: activities.startTime,
+      endTime: activities.endTime,
+      capacity: activities.capacity,
+      status: activities.status,
+      createdAt: activities.createdAt,
+      categoryId: activities.categoryId,
+      // 添加报名人数统计
+      currentRegistrations: sql<number>`
+        COALESCE((
+          SELECT COUNT(*)::int
+          FROM ${registrations}
+          WHERE ${registrations.activityId} = ${activities.id}
+          AND ${registrations.status} IN (1, 2)
+        ), 0)
+      `.as('current_registrations')
+    })
+    .from(activities)
+    .where(eq(activities.organizerId, organizerId))
+    .orderBy(desc(activities.createdAt));
+
+  return result;
 }

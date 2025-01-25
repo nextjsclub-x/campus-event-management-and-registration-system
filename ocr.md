@@ -1,10 +1,10 @@
-好的，以下是图片中文字的 OCR 识别结果：
 
 第一张图片：
 
 提供良好的性能和用户体验。同时，通过集成实时更新和通知功能，系统将为学生和活动组织者提供一个方便的活动发布、报名和管理平台，提升整体校园活动的管理效率和参与体验。。
 4. 设计目标。
 开发一个基于 Next.js 的校园活动管理与报名系统，旨在实现以下功能：
+
 * 活动组织者可以通过系统快速创建和发布活动信息，包括活动的时间、地点、内容描述、报名人数限制等，并能够随时编辑和更新活动信息。
 * 学生可以方便地在线浏览和报名参加感兴趣的活动，系统能够实时统计报名人数和名单，方便活动组织者进行管理。
 * 通知和提醒功能：系统提供通知方式电子邮件，在活动临近时提醒学生，确保参与率。
@@ -23,7 +23,7 @@
 
 技术路线。
 
-使用 Next.js 框架，结合 React Hooks 和 Context-API 进行状态管理，采用 Styled-Components 或 Tailwind-CSS 进行样式管理，确保系统具备良好的性能和用户体验。
+使用 Next.js 框架，结合 React Hooks 和 Zustand 进行状态管理，采用 Styled-Components 或 Tailwind-CSS 进行样式管理，确保系统具备良好的性能和用户体验。
 
 使用 Node.js 和 Express 框架构建后端服务，提供 RESTful-API 与前端交互，结合数据库(如 MongoDB 或 PostgreSQL) 进行数据存储和管理。
 
@@ -94,7 +94,7 @@
 
 技术路线。
 
-使用 Next.js 框架，结合 React Hooks 和 Context-API 进行状态管理，采用 Styled-Components 或 Tailwind-CSS 进行样式管理，确保系统具备良好的性能和用户体验。
+使用 Next.js 框架，结合 React Hooks 和 Zustand 进行状态管理，采用 Styled-Components 或 Tailwind-CSS 进行样式管理，确保系统具备良好的性能和用户体验。
 
 使用 Node.js 和 Express 框架构建后端服务，提供 RESTful-API 与前端交互，结合数据库(如 MongoDB 或 PostgreSQL) 进行数据存储和管理。
 

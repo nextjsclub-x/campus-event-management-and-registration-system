@@ -38,6 +38,7 @@ export const activities = pgTable('activities', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   status: smallint('status').default(1).notNull(),
+  
 }, (table) => ({
     organizerIdIdx: index('idx_activities_organizer_id').on(table.organizerId),
   }));

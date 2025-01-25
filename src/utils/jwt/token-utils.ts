@@ -14,7 +14,7 @@ export async function createToken(payload: UserPayload): Promise<string> {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('2h') // token 有效期設置為 2 小時
+    .setExpirationTime('365d') // token 有效期設置為 365 天
     .sign(secretKey);
 }
 
