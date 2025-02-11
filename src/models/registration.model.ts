@@ -2,7 +2,9 @@
 /* eslint-disable default-case */
 import db from '@/database/neon.db';
 import { and, eq, sql, desc, asc } from 'drizzle-orm';
-import { registrations, activities, users } from '@/schema/db.schema';
+import { registrations } from '@/schema/registration.schema';
+import { activities } from '@/schema/activity.schema';
+import { users } from '@/schema/user.schema';
 
 // 报名状态常量
 export const RegistrationStatus = {

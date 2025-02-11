@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { APIStatusCode } from '@/schema/api-response.schema';
 import db from '@/database/neon.db';
 import { desc, sql } from 'drizzle-orm';
-import { registrations, activities, users } from '@/schema/db.schema';
+import { registrations } from '@/schema/registration.schema';
+import { activities } from '@/schema/activity.schema';
+import { users } from '@/schema/user.schema';
 
 export async function GET(req: NextRequest) {
   try {

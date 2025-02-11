@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import { getAuthData } from '@/lib/auth/utils';
 import { createFeedback, getActivityFeedbacks } from '@/service/feedback.service';
 import { getActivity } from '@/service/activity.service';
 
@@ -46,9 +45,10 @@ export async function GET(request: NextRequest) {
 // POST: 创建新反馈
 export async function POST(request: NextRequest) {
   try {
-    const authData = await getAuthData();
+    // 替换认证方式
+    const userId = request.headers.get('x-user-id');
     
-    if (!authData?.id) {
+    if (!userId) {
       return Response.json({
         code: 401,
         message: '未登录',
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     const feedback = await createFeedback({
-      userId: authData.id,
+      userId: parseInt(userId, 10), // 确保转换为数字
       activityId,
       rating,
       comment,

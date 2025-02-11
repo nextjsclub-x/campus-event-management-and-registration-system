@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import { getAuthData } from '@/lib/auth/utils';
 import { 
   getFeedback, 
   updateFeedback, 
@@ -35,9 +34,9 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const authData = await getAuthData();
+    const userId = request.headers.get('x-user-id');
     
-    if (!authData?.id) {
+    if (!userId) {
       return Response.json({
         code: 401,
         message: '未登录',
@@ -64,7 +63,7 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    const feedback = await updateFeedback(feedbackId, authData.id, {
+    const feedback = await updateFeedback(feedbackId, parseInt(userId, 10), {
       rating,
       comment,
     });
@@ -89,9 +88,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const authData = await getAuthData();
+    const userId = request.headers.get('x-user-id');
     
-    if (!authData?.id) {
+    if (!userId) {
       return Response.json({
         code: 401,
         message: '未登录',
@@ -99,7 +98,7 @@ export async function DELETE(
     }
 
     const feedbackId = Number(params.id);
-    await deleteFeedback(feedbackId, authData.id);
+    await deleteFeedback(feedbackId, parseInt(userId, 10));
 
     return Response.json({
       code: 200,
