@@ -36,14 +36,16 @@ export default function AdminActivitiesPage() {
   const router = useRouter();
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchActivities();
-  }, []);
+  }, [statusFilter]);
 
   const fetchActivities = async () => {
     try {
-      const response = await get('/api/activities');
+      const params = statusFilter !== 'all' ? `?status=${statusFilter}` : '';
+      const response = await get(`/api/activity${params}`);
       if (response.code === APIStatusCode.OK) {
         setActivities(response.data.activities);
       } else {
@@ -59,7 +61,7 @@ export default function AdminActivitiesPage() {
 
   const handleStatusChange = async (activityId: number, newStatus: number) => {
     try {
-      const response = await put(`/api/activities/${activityId}/status`, { status: newStatus });
+      const response = await put(`/api/activity/${activityId}/status`, { status: newStatus });
       if (response.code === APIStatusCode.OK) {
         // 更新成功后刷新列表
         fetchActivities();
@@ -121,12 +123,30 @@ export default function AdminActivitiesPage() {
     <main className='container mx-auto px-4 py-8'>
       <div className='flex justify-between items-center mb-8'>
         <h1 className='text-3xl font-bold'>活动管理</h1>
-        <Button
-          variant='outline'
-          onClick={() => router.push('/admin')}
-        >
-          返回
-        </Button>
+        <div className='flex gap-4'>
+          <Select
+            value={statusFilter}
+            onValueChange={setStatusFilter}
+          >
+            <SelectTrigger className='w-[150px]'>
+              <SelectValue placeholder='选择状态' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='all'>全部活动</SelectItem>
+              <SelectItem value={String(ActivityStatus.DRAFT)}>草稿</SelectItem>
+              <SelectItem value={String(ActivityStatus.PUBLISHED)}>已发布</SelectItem>
+              <SelectItem value={String(ActivityStatus.CANCELLED)}>已取消</SelectItem>
+              <SelectItem value={String(ActivityStatus.COMPLETED)}>已结束</SelectItem>
+              <SelectItem value={String(ActivityStatus.DELETED)}>已删除</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant='outline'
+            onClick={() => router.push('/admin')}
+          >
+            返回
+          </Button>
+        </div>
       </div>
 
       {loading ? (

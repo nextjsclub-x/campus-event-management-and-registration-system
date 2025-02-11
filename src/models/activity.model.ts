@@ -264,10 +264,10 @@ export async function listActivities(filters: {
 // ====================
 export async function updateActivityStatus(
   activityId: number,
-  organizerId: number,
+  organizerId: number | null,  // 修改参数类型，允许为 null
   newStatus: ActivityStatusType
 ) {
-  // 1. 检查活动是否存在
+  // 1. 只检查活动是否存在
   const [existingActivity] = await db.select()
     .from(activities)
     .where(eq(activities.id, activityId));

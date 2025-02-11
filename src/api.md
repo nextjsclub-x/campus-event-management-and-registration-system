@@ -16,7 +16,7 @@
 ### 返回格式
 ```typescript
 // 参考: src/schema/api-response.schema.ts
-interface APIJsonResponse<T = any> {
+interface APIResponse<T = any> {
   code: number;      // 状态码
   message: string;   // 提示信息
   data: T | null;    // 响应数据
@@ -26,7 +26,7 @@ interface APIJsonResponse<T = any> {
 ### 实现参考
 - 参考 `src/app/api/sign-in/route.ts` 和 `src/app/api/sign-up/route.ts` 的实现方式
 - 使用 try-catch 处理错误
-- 统一使用 APIJsonResponse 格式返回数据
+- 统一使用 APIResponse 格式返回数据
 - 所有数据库操作必须通过 Model 层方法进行
   - 分类管理相关操作使用 `@/models/category.model` 中的方法，如 `getCategories()`
   - 活动管理相关操作使用 `@/models/activity.model` 中的方法，如 `updateActivity()`

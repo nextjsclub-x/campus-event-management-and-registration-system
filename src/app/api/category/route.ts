@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCategories, createCategory, updateCategory } from '@/models/category.model';
-import { APIStatusCode, APIJsonResponse } from '@/schema/api-response.schema';
+import { APIStatusCode, APIResponse } from '@/schema/api-response.schema';
+import { 
+  getCategoryList,
+  createCategoryService,
+  updateCategoryService
+} from '@/service/category.service';
 
 export const runtime = 'nodejs';
 
@@ -10,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     // 参数验证
     if (!name) {
-      const res: APIJsonResponse = {
+      const res: APIResponse = {
         code: APIStatusCode.BAD_REQUEST,
         message: '请提供分类名称',
         data: null
@@ -19,9 +23,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 调用model层的createCategory方法创建新分类
-    const category = await createCategory({ name, description });
+    const category = await createCategoryService({ name, description });
 
-    const res: APIJsonResponse = {
+    const res: APIResponse = {
       code: APIStatusCode.CREATED,
       message: '创建分类成功',
       data: category
@@ -29,7 +33,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(res);
   } catch (error: any) {
     // 处理未预期的错误
-    const res: APIJsonResponse = {
+    const res: APIResponse = {
       code: APIStatusCode.INTERNAL_SERVER_ERROR,
       message: `创建分类失败: ${error.message}`,
       data: null
@@ -44,7 +48,7 @@ export async function PUT(request: NextRequest) {
 
     // 参数验证
     if (!id) {
-      const res: APIJsonResponse = {
+      const res: APIResponse = {
         code: APIStatusCode.BAD_REQUEST,
         message: '请提供分类ID',
         data: null
@@ -53,7 +57,7 @@ export async function PUT(request: NextRequest) {
     }
 
     if (!name) {
-      const res: APIJsonResponse = {
+      const res: APIResponse = {
         code: APIStatusCode.BAD_REQUEST,
         message: '请提供分类名称',
         data: null
@@ -62,9 +66,9 @@ export async function PUT(request: NextRequest) {
     }
 
     // 调用model层的updateCategory方法更新分类
-    const result = await updateCategory(id, { name, description });
+    const result = await updateCategoryService(id, { name, description });
 
-    const res: APIJsonResponse = {
+    const res: APIResponse = {
       code: APIStatusCode.OK,
       message: '更新分类成功',
       data: result
@@ -73,7 +77,7 @@ export async function PUT(request: NextRequest) {
   } catch (error: any) {
     // 处理特定错误
     if (error.message === 'Category not found') {
-      const res: APIJsonResponse = {
+      const res: APIResponse = {
         code: APIStatusCode.NOT_FOUND,
         message: '分类不存在',
         data: null
@@ -82,7 +86,7 @@ export async function PUT(request: NextRequest) {
     }
 
     if (error.message === 'Category name already exists') {
-      const res: APIJsonResponse = {
+      const res: APIResponse = {
         code: APIStatusCode.CONFLICT,
         message: '分类名称已存在',
         data: null
@@ -91,7 +95,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // 处理未预期的错误
-    const res: APIJsonResponse = {
+    const res: APIResponse = {
       code: APIStatusCode.INTERNAL_SERVER_ERROR,
       message: `更新分类失败: ${error.message}`,
       data: null
@@ -103,9 +107,9 @@ export async function PUT(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // 调用model层的getCategories方法获取分类列表
-    const categories = await getCategories();
+    const categories = await getCategoryList();
 
-    const res: APIJsonResponse = {
+    const res: APIResponse = {
       code: APIStatusCode.OK,
       message: '获取分类列表成功',
       data: {
@@ -116,7 +120,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(res);
   } catch (error: any) {
     // 处理未预期的错误
-    const res: APIJsonResponse = {
+    const res: APIResponse = {
       code: APIStatusCode.INTERNAL_SERVER_ERROR,
       message: `获取分类列表失败: ${error.message}`,
       data: null

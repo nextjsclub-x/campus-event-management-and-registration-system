@@ -39,13 +39,17 @@ export async function GET(request: NextRequest) {
     // 获取查询参数
     const { searchParams } = request.nextUrl;
     
-    // 解析过滤条件
+    // 修改默认状态逻辑，如果没有传status参数，则不加入过滤条件
     const filters = {
-      status: searchParams.has('status') ? parseInt(searchParams.get('status')!, 10) as ActivityStatusType : 2 as ActivityStatusType,
       categoryId: searchParams.has('categoryId') ? parseInt(searchParams.get('categoryId')!, 10) : undefined,
       startTime: searchParams.has('startTime') ? new Date(searchParams.get('startTime')!) : undefined,
       endTime: searchParams.has('endTime') ? new Date(searchParams.get('endTime')!) : undefined
     };
+
+    // 只有当明确指定了status时才添加到过滤条件中
+    if (searchParams.has('status')) {
+      filters.status = parseInt(searchParams.get('status')!, 10) as ActivityStatusType;
+    }
 
     // 解析分页参数
     const page = searchParams.has('page') ? parseInt(searchParams.get('page')!, 10) : 1;
