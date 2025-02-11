@@ -1,206 +1,242 @@
-/* eslint-disable jsx-a11y/label-has-associated-control */
-
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { NavBar } from '@/components/common/nav-bar';
-import { post, get } from '@/utils/request/request';
-import { APIStatusCode } from '@/schema/api-response.schema';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { post } from '@/utils/request/request';
+import { useToast } from '@/hooks/use-toast';
+import { useUserStore } from '@/store/user';
 
-export default function CreateActivityPage() {
+// 定义表单数据的接口
+interface ActivityFormData {
+  title: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  capacity: string;
+  categoryId: string;
+}
+
+const CreateActivityPage = () => {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState([]);
-  const [formData, setFormData] = useState({
+  const { toast } = useToast();
+  const { token, userId } = useUserStore();
+  
+  // 创建默认的开始时间（当前时间）和结束时间（24小时后）
+  const now = new Date();
+  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  
+  // 格式化时间为 datetime-local 输入框所需的格式 (YYYY-MM-DDThh:mm)
+  const formatDateForInput = (date: Date) => date.toISOString().slice(0, 16);
+
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [formData, setFormData] = useState<ActivityFormData>({
     title: '',
     description: '',
-    startTime: new Date().toISOString().slice(0, 16),
-    endTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+    startTime: formatDateForInput(now),      // 设置默认开始时间
+    endTime: formatDateForInput(tomorrow),    // 设置默认结束时间
     location: '',
-    capacity: '',
+    capacity: '10',                          // 设置默认活动容量为10
     categoryId: ''
   });
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await get('/api/category');
-        if (response.code === APIStatusCode.OK) {
-          setCategories(response.data.categories);
-        }
-      } catch (error) {
-        console.error('获取分类列表失败:', error);
-      }
-    };
-
-    fetchCategories();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
 
     try {
-      const response = await post('/api/activities', {
+      if (!userId) {
+        throw new Error('请先登录');
+      }
+
+      // 验证表单
+      if (!formData.title.trim() || !formData.description.trim() || 
+          !formData.startTime || !formData.endTime || 
+          !formData.location.trim() || !formData.capacity || 
+          !formData.categoryId) {
+        throw new Error('请填写所有必填项');
+      }
+
+      // 发送创建请求，添加类型
+      interface CreateActivityRequest {
+        organizerId: number;
+        title: string;
+        description: string;
+        startTime: string;
+        endTime: string;
+        location: string;
+        capacity: number;
+        categoryId: number;
+      }
+
+      const requestData: CreateActivityRequest = {
         ...formData,
-        capacity: parseInt(formData.capacity, 10)
+        organizerId: userId,
+        capacity: parseInt(formData.capacity, 10),
+        categoryId: parseInt(formData.categoryId, 10)
+      };
+
+      await post('/api/activity/create', requestData);
+
+      toast({
+        title: '创建成功',
+        description: '活动已创建'
       });
 
-      if (response.code === APIStatusCode.CREATED) {
-        alert('活动创建成功！');
-        router.push('/');
-      } else {
-        alert(response.message || '创建失败，请重试');
-      }
+      router.push('/activities');
     } catch (error: any) {
-      alert(error.message || '创建失败，请重试');
+      toast({
+        variant: 'destructive',
+        title: '创建失败',
+        description: error.message || '请稍后重试'
+      });
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleCategoryChange = (value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      categoryId: value
-    }));
-  };
-
-  const handleSwitchChange = (checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      isPublic: checked
-    }));
-  };
-
   return (
-    <main className='flex-1 container mx-auto px-4 py-8'>
-      <Card className='max-w-2xl mx-auto'>
+    <div className='container mx-auto py-12'>
+      <div className='mb-8'>
+        <h2 className='text-3xl font-bold'>创建活动</h2>
+        <p className='text-muted-foreground mt-2'>
+          创建一个新的活动
+        </p>
+      </div>
+
+      <Card>
         <CardHeader>
-          <CardTitle className='text-2xl'>创建新活动</CardTitle>
+          <CardTitle>活动信息</CardTitle>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className='space-y-4'>
+        <CardContent>
+          <form onSubmit={handleSubmit}
+            className='space-y-6'>
             <div className='space-y-2'>
-              <label className='text-sm font-medium'>活动标题</label>
+              <Label htmlFor='title'>活动标题</Label>
               <Input
-                required
-                name='title'
+                id='title'
                 value={formData.title}
-                onChange={handleInputChange}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  title: e.target.value
+                }))}
                 placeholder='请输入活动标题'
               />
             </div>
-            
+
             <div className='space-y-2'>
-              <label className='text-sm font-medium'>活动分类</label>
-              <Select
-                required
-                value={formData.categoryId}
-                onValueChange={handleCategoryChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder='请选择活动分类' />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category: any) => (
-                    <SelectItem key={category.id}
-                      value={String(category.id)}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className='space-y-2'>
-              <label className='text-sm font-medium'>活动描述</label>
+              <Label htmlFor='description'>活动描述</Label>
               <Textarea
-                required
-                name='description'
+                id='description'
                 value={formData.description}
-                onChange={handleInputChange}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  description: e.target.value
+                }))}
                 placeholder='请输入活动描述'
-                rows={4}
+                rows={6}
               />
             </div>
 
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div className='grid grid-cols-2 gap-4'>
               <div className='space-y-2'>
-                <label className='text-sm font-medium'>开始时间</label>
+                <Label htmlFor='startTime'>开始时间</Label>
                 <Input
-                  required
+                  id='startTime'
                   type='datetime-local'
-                  name='startTime'
                   value={formData.startTime}
-                  onChange={handleInputChange}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    startTime: e.target.value
+                  }))}
                 />
               </div>
 
               <div className='space-y-2'>
-                <label className='text-sm font-medium'>结束时间</label>
+                <Label htmlFor='endTime'>结束时间</Label>
                 <Input
-                  required
+                  id='endTime'
                   type='datetime-local'
-                  name='endTime'
                   value={formData.endTime}
-                  onChange={handleInputChange}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    endTime: e.target.value
+                  }))}
                 />
               </div>
             </div>
 
             <div className='space-y-2'>
-              <label className='text-sm font-medium'>活动地点</label>
+              <Label htmlFor='location'>活动地点</Label>
               <Input
-                required
-                name='location'
+                id='location'
                 value={formData.location}
-                onChange={handleInputChange}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  location: e.target.value
+                }))}
                 placeholder='请输入活动地点'
               />
             </div>
 
-            <div className='space-y-2'>
-              <label className='text-sm font-medium'>人数限制</label>
-              <Input
-                required
-                type='number'
-                name='capacity'
-                value={formData.capacity}
-                onChange={handleInputChange}
-                placeholder='请输入人数限制'
-                min='1'
-              />
-            </div>
-          </CardContent>
+            <div className='grid grid-cols-2 gap-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='capacity'>活动容量</Label>
+                <Input
+                  id='capacity'
+                  type='number'
+                  min='1'
+                  value={formData.capacity}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    capacity: e.target.value
+                  }))}
+                  placeholder='请输入活动容量'
+                />
+              </div>
 
-          <CardFooter className='flex justify-between'>
-            <Button type='button'
-              variant='outline'
-              onClick={() => router.back()}>取消
-            </Button>
-            <Button type='submit'
-              disabled={loading}>
-              {loading ? '创建中...' : '创建活动'}
-            </Button>
-          </CardFooter>
-        </form>
+              <div className='space-y-2'>
+                <Label htmlFor='categoryId'>活动类别</Label>
+                <Input
+                  id='categoryId'
+                  type='number'
+                  min='1'
+                  value={formData.categoryId}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    categoryId: e.target.value
+                  }))}
+                  placeholder='请选择活动类别'
+                />
+              </div>
+            </div>
+
+            <div className='flex justify-end space-x-4'>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => router.back()}
+                disabled={submitting}
+              >
+                取消
+              </Button>
+              <Button
+                type='submit'
+                disabled={submitting}
+              >
+                {submitting ? '创建中...' : '创建活动'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
       </Card>
-    </main>
+    </div>
   );
-}
+};
+
+export default CreateActivityPage; 

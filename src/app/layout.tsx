@@ -1,4 +1,3 @@
-'use client';
 
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
@@ -15,9 +14,11 @@ export default function RootLayout({
       lang='en'
       suppressHydrationWarning
     >
-      <body>
-        <NavBar />
-        {children}
+      <body className='flex flex-col justify-start items-center'>
+        <div  className='w-full max-w-7xl mx-auto'>
+          <NavBar />
+          {children}
+        </div>
       </body>
     </html>
   );

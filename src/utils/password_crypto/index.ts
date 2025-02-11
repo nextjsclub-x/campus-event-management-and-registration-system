@@ -22,13 +22,13 @@ export async function hashPassword(
 /**
  * Verifies a password against a stored hash.
  *
- * @param storedHash - The stored bcrypt hash to compare against.
  * @param passwordAttempt - The password attempt to verify.
+ * @param storedHash - The stored bcrypt hash to compare against.
  * @returns A promise that resolves to a boolean indicating whether the password is correct.
  */
 export async function verifyPassword(
-  storedHash: string,
-  passwordAttempt: string
+  passwordAttempt: string,
+  storedHash: string
 ): Promise<boolean> {
   return bcrypt.compare(passwordAttempt, storedHash);
 }

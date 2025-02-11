@@ -13,16 +13,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useRouter } from 'next/navigation';
 import { post } from '@/utils/request/request';
+import { Bell, MessageSquare } from 'lucide-react';
 
 export function NavBar() {
   const router = useRouter();
-  const token = useUserStore((state) => state.token);
-  const clearToken = useUserStore((state) => state.setToken);
+  const { token, role, username } = useUserStore();
 
   const handleLogout = async () => {
     try {
       await post('/api/sign-out');
-      clearToken(null); // 清除前端状态
+      useUserStore.getState().clearUserInfo();
       router.push('/');
     } catch (error) {
       console.error('退出登录失败:', error);
@@ -30,24 +30,46 @@ export function NavBar() {
   };
 
   return (
-    <header className='border-b'>
-      <div className='container mx-auto px-4 py-4 flex justify-between items-center'>
-        <Link href='/'
-          className='hover:opacity-80'>
-          <h1 className='text-2xl font-bold'>校园活动管理系统</h1>
-        </Link>
+    <header className='border-b w-full bg-orange-100'>
+      <div className='mx-auto px-4 py-4 flex justify-between items-center'>
+        <div className='flex items-center space-x-8'>
+          <Link href='/'
+            className='hover:opacity-80'>
+            <h1 className='text-2xl font-bold'>校园活动管理系统</h1>
+          </Link>
+          <nav className='flex items-center space-x-6'>
+            <Link 
+              href='/announcements'
+              className='flex items-center text-muted-foreground hover:text-primary transition-colors'
+            >
+              <Bell className='w-4 h-4 mr-1' />
+              站内公告
+            </Link>
+            <Link 
+              href='/comments'
+              className='flex items-center text-muted-foreground hover:text-primary transition-colors'
+            >
+              <MessageSquare className='w-4 h-4 mr-1' />
+              社区留言
+            </Link>
+          </nav>
+        </div>
+
         <div className='flex items-center space-x-4'>
           <ModeToggle />
           {token ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant='outline'>个人中心</Button>
+                <Button variant='outline'>
+                  {username || '个人中心'}
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
+                {role === 'admin' && (
+                  <DropdownMenuItem onClick={() => router.push('/admin')}>管理后台</DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => router.push('/profile')}>个人信息</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push('/my-activities')}>我的活动</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/admin')}>管理后台</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>退出登录</DropdownMenuItem>
               </DropdownMenuContent>

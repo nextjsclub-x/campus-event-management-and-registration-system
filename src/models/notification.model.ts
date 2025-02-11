@@ -1,5 +1,7 @@
+'use server'
+
 import db from '@/database/neon.db';
-import { notifications } from '@/schema/db.schema';
+import { notifications } from '@/schema/notification.schema';
 import { and, eq, desc, sql } from 'drizzle-orm';
 
 // ====================
@@ -75,4 +77,18 @@ export async function markNotificationAsRead(notificationId: number) {
     .where(eq(notifications.id, notificationId));
 
   return { message: 'Notification marked as read successfully' };
+}
+
+// 获取通知详情
+export async function getNotificationById(notificationId: number) {
+  const [notification] = await db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.id, notificationId));
+
+  if (!notification) {
+    throw new Error('通知不存在');
+  }
+
+  return notification;
 }

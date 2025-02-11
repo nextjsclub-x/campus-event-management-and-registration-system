@@ -7,7 +7,9 @@ import { APIStatusCode } from '@/schema/api-response.schema';
 const PUBLIC_ROUTES = [
   '/api/sign-up',
   '/api/sign-in',
-  '/api/category'
+  '/api/category',
+  '/api/activity',          // 活动列表
+  '/api/activity/[0-9]+',   // 活动详情（使用正则匹配数字ID）
 ] as const;
 
 export async function middleware(request: NextRequest) {
@@ -15,7 +17,15 @@ export async function middleware(request: NextRequest) {
   console.log('当前访问路径:', pathname);
 
   // 检查是否为公开路由
-  if (PUBLIC_ROUTES.includes(pathname as any)) {
+  if (PUBLIC_ROUTES.some(route => {
+    if (route.includes('[0-9]+')) {
+      // 对于包含正则的路由，使用正则匹配
+      const regex = new RegExp(`^${  route.replace('[0-9]+', '\\d+')  }$`);
+      return regex.test(pathname);
+    }
+    // 对于普通路由，使用完全匹配
+    return route === pathname;
+  })) {
     console.log('当前为公开路由，无需验证');
     return NextResponse.next();
   }

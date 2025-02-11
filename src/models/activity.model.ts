@@ -1,5 +1,6 @@
 import db from '@/database/neon.db';
-import { activities , registrations } from '@/schema/db.schema';
+import { activities } from '@/schema/activity.schema';
+import { registrations } from '@/schema/registration.schema';
 import { eq, and, desc, asc, sql, type SQL } from 'drizzle-orm';
 
 // 活动状态常量

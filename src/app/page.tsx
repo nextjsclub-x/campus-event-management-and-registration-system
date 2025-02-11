@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
@@ -9,7 +9,6 @@ import { APIStatusCode } from '@/schema/api-response.schema';
 import { toast } from 'react-hot-toast';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Bell } from 'lucide-react';
 import { useUserStore } from '@/store/user';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -36,50 +35,58 @@ const ActivityStatus = {
   ALL: 'all',
   PUBLISHED: '2',
   CANCELLED: '3',
-  COMPLETED: '4'
+  COMPLETED: '4',
 } as const;
-
-const ActivityStatusText: Record<string, string> = {
-  'all': '全部',
-  [ActivityStatus.PUBLISHED]: '可报名',
-  'ended': '已结束'
-};
 
 export default function HomePage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [upcomingActivities, setUpcomingActivities] = useState<UpcomingActivity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentStatus, setCurrentStatus] = useState<string>(ActivityStatus.PUBLISHED);
+
+  // Make the default status "all" so that the first (leftmost) tab is "全部"
+  const [currentStatus, setCurrentStatus] = useState<string>(ActivityStatus.ALL);
   const [searchQuery, setSearchQuery] = useState('');
   const token = useUserStore((state) => state.token);
 
+  // Tabs in the order you want to appear: "全部", "可报名", "已结束"
+  const tabItems = [
+    { value: ActivityStatus.ALL, label: '全部' },
+    { value: ActivityStatus.PUBLISHED, label: '可报名' },
+    { value: 'ended', label: '已结束' },
+  ];
+
   const fetchActivities = async (status?: string) => {
     try {
-      let url = '/api/activities';
+      let url = '/api/activity';
+
+      // If the user selected "已结束" (ended), we still fetch published(2) first
+      // and then filter out the ended ones.
       if (status === 'ended') {
-        // 获取所有已发布的活动，前端筛选已结束的
-        url = `/api/activities?status=${ActivityStatus.PUBLISHED}`;
+        url = `/api/activity?status=${ActivityStatus.PUBLISHED}`;
       } else if (status && status !== 'all') {
-        url = `/api/activities?status=${status}`;
+        url = `/api/activity?status=${status}`;
       }
+
+      // Always order by startTime descending
+      url += `${url.includes('?') ? '&' : '?'}orderBy=startTime&order=desc`;
+
       const response = await get(url);
       if (response.code === APIStatusCode.OK) {
         let filteredActivities = response.data.activities || [];
         const now = new Date();
-        
+
         if (status === 'ended') {
-          // 筛选出结束时间早于当前时间的活动
+          // Filter out only the activities that have ended
           filteredActivities = filteredActivities.filter((activity: Activity) => 
             new Date(activity.endTime) < now
           );
         } else if (status === ActivityStatus.PUBLISHED) {
-          // 在"可报名"标签下，过滤掉已结束的活动
-          filteredActivities = filteredActivities.filter((activity: Activity) => 
+          // Filter out only activities that haven't ended yet
+          filteredActivities = filteredActivities.filter((activity: Activity) =>
             new Date(activity.endTime) >= now
           );
         }
 
-        // 如果有搜索关键词，过滤标题中包含关键词的活动
         if (searchQuery) {
           filteredActivities = filteredActivities.filter((activity: Activity) =>
             activity.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -103,7 +110,7 @@ export default function HomePage() {
     const fetchUpcomingActivities = async () => {
       if (!token) return;
       try {
-        const response = await get('/api/activities/upcoming');
+        const response = await get('/api/activity?status=2');
         if (response.code === APIStatusCode.OK) {
           setUpcomingActivities(response.data.activities);
         }
@@ -120,58 +127,57 @@ export default function HomePage() {
   };
 
   const isActivityClickable = (activity: Activity) => {
-    // 检查活动是否已结束
     const endTime = new Date(activity.endTime);
     const now = new Date();
     if (endTime < now) {
       return false;
     }
-
-    // 只有已发布的活动可以点击
     return activity.status === 2;
   };
 
   const getActivityStatusClass = (activity: Activity) => {
-    // 检查是否过期
     const endTime = new Date(activity.endTime);
     const now = new Date();
     if (endTime < now) {
       return 'bg-gray-100 text-gray-800';
     }
 
-    // 检查是否人满
     if (activity.currentRegistrations >= activity.capacity && activity.status === 2) {
       return 'bg-orange-100 text-orange-800';
     }
 
-    // 其他状态
     switch (activity.status) {
-      case 2: return 'bg-green-100 text-green-800';
-      case 3: return 'bg-red-100 text-red-800';
-      case 4: return 'bg-gray-100 text-gray-800';
-      default: return 'bg-yellow-100 text-yellow-800';
+      case 2:
+        return 'bg-green-100 text-green-800';
+      case 3:
+        return 'bg-red-100 text-red-800';
+      case 4:
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-yellow-100 text-yellow-800';
     }
   };
 
   const getActivityStatusText = (activity: Activity) => {
-    // 检查是否过期
     const endTime = new Date(activity.endTime);
     const now = new Date();
     if (endTime < now) {
       return '已结束';
     }
 
-    // 检查是否人满
     if (activity.currentRegistrations >= activity.capacity && activity.status === 2) {
       return '名额已满';
     }
 
-    // 其他状态
     switch (activity.status) {
-      case 2: return '可报名';
-      case 3: return '已取消';
-      case 4: return '已结束';
-      default: return '草稿';
+      case 2:
+        return '可报名';
+      case 3:
+        return '已取消';
+      case 4:
+        return '已结束';
+      default:
+        return '草稿';
     }
   };
 
@@ -190,7 +196,8 @@ export default function HomePage() {
     }
   };
 
-  const formatTimeRange = (startTime: string, endTime: string) => `${new Date(startTime).toLocaleString()} - ${new Date(endTime).toLocaleString()}`;
+  const formatTimeRange = (startTime: string, endTime: string) =>
+    `${new Date(startTime).toLocaleString()} - ${new Date(endTime).toLocaleString()}`;
 
   if (loading) {
     return (
@@ -228,7 +235,7 @@ export default function HomePage() {
           </Alert>
         )}
 
-        <div className='flex justify-between items-center'>
+        <div className='flex flex-col gap-6 md:flex-row md:items-center md:justify-between'>
           <div className='space-y-4'>
             <div className='flex items-center gap-4'>
               <Input
@@ -241,9 +248,10 @@ export default function HomePage() {
             <Tabs value={currentStatus}
               onValueChange={handleStatusChange}>
               <TabsList>
-                {Object.entries(ActivityStatusText).map(([value, text]) => (
+                {tabItems.map(({ value, label }) => (
                   <TabsTrigger key={value}
-                    value={value}>{text}
+                    value={value}>
+                    {label}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -255,17 +263,23 @@ export default function HomePage() {
         </div>
 
         {activities.length > 0 ? (
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+          <div className='grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'>
             {activities.map((activity) => (
-              <Card key={activity.id}
-                className={`hover:shadow-lg transition-shadow ${!isActivityClickable(activity) ? 'opacity-60' : ''}`}>
+              <Card
+                key={activity.id}
+                className={`hover:shadow-lg transition-shadow ${
+                  !isActivityClickable(activity) ? 'opacity-60' : ''
+                }`}
+              >
                 <CardHeader>
                   <CardTitle>{activity.title}</CardTitle>
                   <CardDescription>
                     <div className='flex justify-between items-center'>
                       <span>{new Date(activity.startTime).toLocaleString()}</span>
                       <div className='flex gap-2'>
-                        <span className={`text-sm px-2 py-1 rounded-full ${getActivityStatusClass(activity)}`}>
+                        <span
+                          className={`text-sm px-2 py-1 rounded-full ${getActivityStatusClass(activity)}`}
+                        >
                           {getActivityStatusText(activity)}
                         </span>
                       </div>
@@ -273,17 +287,23 @@ export default function HomePage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className='text-muted-foreground line-clamp-2'>{activity.description}</p>
+                  <p className='text-muted-foreground line-clamp-2'>
+                    {activity.description}
+                  </p>
                   <p className='text-sm text-muted-foreground mt-2'>
                     已报名：{activity.currentRegistrations || 0}/{activity.capacity}
                   </p>
                 </CardContent>
                 <CardFooter>
-                  <Link href={`/activities/${activity.id}`}
+                  <Link
+                    href={`/activities/${activity.id}`}
                     className='w-full'
-                    onClick={(e) => handleActivityClick(activity, e)}>
-                    <Button className='w-full'
-                      variant={isActivityClickable(activity) ? 'default' : 'secondary'}>
+                    onClick={(e) => handleActivityClick(activity, e)}
+                  >
+                    <Button
+                      className='w-full'
+                      variant={isActivityClickable(activity) ? 'default' : 'secondary'}
+                    >
                       查看详情
                     </Button>
                   </Link>
@@ -292,9 +312,7 @@ export default function HomePage() {
             ))}
           </div>
         ) : (
-          <div className='text-center text-muted-foreground'>
-            暂无活动
-          </div>
+          <div className='text-center text-muted-foreground'>暂无活动</div>
         )}
       </div>
     </main>

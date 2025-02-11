@@ -75,8 +75,8 @@ export enum APIStatusCode {
   BACKUP_IN_PROGRESS = 5003, // 备份进行中
 }
 
-export interface APIJsonResponse<T = any> {
-  code: APIStatusCode | number;
+export interface APIResponse<T> {
+  code: number;
   message: string;
-  data?: T;
+  data: T;
 }

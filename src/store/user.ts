@@ -1,28 +1,45 @@
 import { create } from 'zustand';
-import { persist, PersistOptions } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
 
-type UserState = {
+interface UserState {
   token: string | null;
-  setToken: (token: string | null) => void;
-};
-
-// 定义持久化配置类型
-type UserPersist = {
-  state: UserState;
-  version?: number;
-};
-
-// 配置持久化参数
-const persistConfig: PersistOptions<UserState, UserPersist> = {
-  name: 'user-storage',
-};
+  userId: number | null;
+  role: string | null;
+  username: string | null;
+  // actions
+  setUserInfo: (info: { token: string; userId: number; role: string; username: string } | null) => void;
+  clearUserInfo: () => void;
+}
 
 export const useUserStore = create<UserState>()(
   persist(
     (set) => ({
       token: null,
-      setToken: (token) => set({ token }),
+      userId: null,
+      role: null,
+      username: null,
+
+      setUserInfo: (info) => set(info ? {
+        token: info.token,
+        userId: info.userId,
+        role: info.role,
+        username: info.username
+      } : {
+        token: null,
+        userId: null,
+        role: null,
+        username: null
+      }),
+
+      clearUserInfo: () => set({
+        token: null,
+        userId: null,
+        role: null,
+        username: null
+      })
     }),
-    persistConfig
+    {
+      name: 'user-storage', // localStorage 的 key
+    }
   )
 );

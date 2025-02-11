@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { APIStatusCode } from '@/schema/api-response.schema';
 import db from '@/database/neon.db';
-import { registrations } from '@/schema/db.schema';
 import { eq } from 'drizzle-orm';
+import { registrations } from '@/schema/db.schema';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {

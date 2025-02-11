@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable default-case */
 import db from '@/database/neon.db';
-import { registrations, activities, users } from '@/schema/db.schema';
 import { and, eq, sql, desc, asc } from 'drizzle-orm';
+import { registrations, activities, users } from '@/schema/db.schema';
 
 // 报名状态常量
 export const RegistrationStatus = {

@@ -1,6 +1,6 @@
 'use client';
 
-import { APIJsonResponse } from '@/schema/api-response.schema';
+import { APIResponse } from '@/schema/api-response.schema';
 import { useUserStore } from '@/store/user';
 
 interface RequestOptions extends RequestInit {
@@ -27,7 +27,7 @@ const getToken = () => {
   return null;
 };
 
-const request = async <T = any>(url: string, options: RequestOptions = {}): Promise<APIJsonResponse<T>> => {
+const request = async <T = any>(url: string, options: RequestOptions = {}): Promise<APIResponse<T>> => {
   const {
     params,
     data,
@@ -68,7 +68,7 @@ const request = async <T = any>(url: string, options: RequestOptions = {}): Prom
       body: data ? JSON.stringify(data) : undefined,
     });
 
-    const result = await response.json() as APIJsonResponse<T>;
+    const result = await response.json() as APIResponse<T>;
 
     if (!response.ok) {
       throw new RequestError(result.message, result.code, result.data);
@@ -95,5 +95,11 @@ export const post = <T = any>(url: string, data?: any, options?: RequestOptions)
 export const put = <T = any>(url: string, data?: any, options?: RequestOptions) => request<T>(url, { ...options, method: 'PUT', data });
 
 export const del = <T = any>(url: string, options?: RequestOptions) => request<T>(url, { ...options, method: 'DELETE' });
+
+export const patch = <T = any>(url: string, data?: any, options?: RequestOptions) => 
+  request<T>(url, { ...options, method: 'PATCH', data });
+
+export const head = <T = any>(url: string, options?: RequestOptions) => 
+  request<T>(url, { ...options, method: 'HEAD' });
 
 export default request;

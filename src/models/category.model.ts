@@ -1,6 +1,7 @@
 import db from '@/database/neon.db';
-import { categories, activities } from '@/schema/db.schema';
 import { and, eq, sql } from 'drizzle-orm';
+import { categories } from '@/schema/category.schema';
+import { activities } from '@/schema/activity.schema';
 
 // ====================
 //  1. 获取分类列表
