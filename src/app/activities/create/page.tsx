@@ -1,15 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { post } from '@/utils/request/request';
+import { post, get } from '@/utils/request/request';
 import { useToast } from '@/hooks/use-toast';
 import { useUserStore } from '@/store/user';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // 定义表单数据的接口
 interface ActivityFormData {
@@ -20,6 +27,13 @@ interface ActivityFormData {
   location: string;
   capacity: string;
   categoryId: string;
+}
+
+// 添加分类接口
+interface Category {
+  id: number;
+  name: string;
+  description: string;
 }
 
 const CreateActivityPage = () => {
@@ -44,6 +58,36 @@ const CreateActivityPage = () => {
     capacity: '10',                          // 设置默认活动容量为10
     categoryId: ''
   });
+
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  // 获取分类列表
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await get('/api/category');
+        if (response.code === 200 && response.data.categories) {
+          setCategories(response.data.categories);
+          // 如果有分类数据，设置第一个分类为默认值
+          if (response.data.categories.length > 0) {
+            setFormData(prev => ({
+              ...prev,
+              categoryId: response.data.categories[0].id.toString()
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('获取分类列表失败:', error);
+        toast({
+          variant: 'destructive',
+          title: '获取分类列表失败',
+          description: '请刷新页面重试'
+        });
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -88,7 +132,7 @@ const CreateActivityPage = () => {
         description: '活动已创建'
       });
 
-      router.push('/activities');
+      router.push('/');
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -202,17 +246,27 @@ const CreateActivityPage = () => {
 
               <div className='space-y-2'>
                 <Label htmlFor='categoryId'>活动类别</Label>
-                <Input
-                  id='categoryId'
-                  type='number'
-                  min='1'
+                <Select
                   value={formData.categoryId}
-                  onChange={(e) => setFormData(prev => ({
+                  onValueChange={(value) => setFormData(prev => ({
                     ...prev,
-                    categoryId: e.target.value
+                    categoryId: value
                   }))}
-                  placeholder='请选择活动类别'
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder='请选择活动类别' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem
+                        key={category.id}
+                        value={category.id.toString()}
+                      >
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

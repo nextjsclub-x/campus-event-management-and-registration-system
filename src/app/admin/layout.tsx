@@ -14,6 +14,13 @@ const menuItems = [
     ]
   },
   {
+    title: '分类管理',
+    children: [
+      { title: '分类列表', path: '/admin/categories' },
+      { title: '新增分类', path: '/admin/categories/create' },
+    ]
+  },
+  {
     title: '公告管理',
     children: [
       { title: '公告列表', path: '/admin/announcements' },
@@ -44,7 +51,6 @@ const menuItems = [
   {
     title: '系统设置',
     children: [
-      { title: '分类管理', path: '/admin/categories' },
       { title: '权限设置', path: '/admin/permissions' },
     ]
   }

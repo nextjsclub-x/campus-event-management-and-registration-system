@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { APIStatusCode, APIJsonResponse } from '@/schema/api-response.schema';
+import { APIStatusCode, APIResponse } from '@/schema/api-response.schema';
 import { registerUser } from '@/service/user.service';
 import { UserRole } from '@/schema/user.schema';
 
