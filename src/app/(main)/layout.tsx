@@ -1,7 +1,6 @@
 
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
+import { NavBar } from '@/components/common/nav-bar';
 
 export default function RootLayout({
   children,
@@ -9,15 +8,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang='en'
-      suppressHydrationWarning
-    >
-      <body className='flex flex-col justify-start items-center w-full'>
+
+      <div className='w-full flex flex-col justify-start items-center'>
         {/* <div  className='w-full'> */}
+          <NavBar />
           {children}
         {/* </div> */}
-      </body>
-    </html>
+      </div>
   );
 }
