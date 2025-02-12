@@ -31,6 +31,9 @@ export async function createNotification(
   }
 
   try {
+    if (activityId === null) {
+      throw new Error('活动ID不能为空');
+    }
     return await createNotificationModel(userId, activityId, message);
   } catch (error: any) {
     throw new Error(`创建通知失败：${error.message}`);

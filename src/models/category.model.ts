@@ -28,6 +28,11 @@ interface CategoryData {
   description?: string;
 }
 
+interface UpdateCategoryData {
+  name?: string;
+  description?: string;
+}
+
 export async function createCategory(categoryData: CategoryData) {
   // 1. 检查分类名是否已存在
   const [existingCategory] = await db
@@ -59,7 +64,7 @@ export async function createCategory(categoryData: CategoryData) {
 // ====================
 //  3. 更新分类
 // ====================
-export async function updateCategory(categoryId: number, categoryData: CategoryData) {
+export async function updateCategory(categoryId: number, categoryData: UpdateCategoryData) {
   // 1. 检查分类是否存在
   const [existingCategory] = await db
     .select()

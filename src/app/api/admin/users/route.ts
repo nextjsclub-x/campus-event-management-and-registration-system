@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { APIStatusCode } from '@/schema/api-response.schema';
-import { getUsersWithActivityStats } from '@/models/user.model';
+import { getUserList } from '@/service/user.service';
 
 export async function GET(req: NextRequest) {
   try {
-    const users = await getUsersWithActivityStats();
+    const users = await getUserList();
     
     return NextResponse.json({
       code: APIStatusCode.OK,

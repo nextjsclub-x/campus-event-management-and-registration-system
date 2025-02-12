@@ -40,7 +40,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     
     // 修改默认状态逻辑，如果没有传status参数，则不加入过滤条件
-    const filters = {
+    const filters: {
+      categoryId?: number;
+      startTime?: Date;
+      endTime?: Date;
+      status?: ActivityStatusType;
+    } = {
       categoryId: searchParams.has('categoryId') ? parseInt(searchParams.get('categoryId')!, 10) : undefined,
       startTime: searchParams.has('startTime') ? new Date(searchParams.get('startTime')!) : undefined,
       endTime: searchParams.has('endTime') ? new Date(searchParams.get('endTime')!) : undefined

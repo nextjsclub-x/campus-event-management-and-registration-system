@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { APIResponse, APIStatusCode } from '@/schema/api-response.schema';
-import { listUsers } from '@/models/userl.model';
+import { getUserList } from '@/service/user.service';
 
 export async function GET() {
   try {
     // 调用model层方法获取用户列表，提供默认的分页参数
-    const users = await listUsers({}, { page: 1, pageSize: 10 });
+    const users = await getUserList({}, { page: 1, pageSize: 10 });
 
     const res: APIResponse = {
       code: APIStatusCode.OK,

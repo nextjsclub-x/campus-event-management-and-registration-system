@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { APIResponse } from '@/schema/api-response.schema';
-import { updateActivity } from '@/service/activity.service';
+import { updateActivityStatus } from '@/service/activity.service';
 
 export async function PUT(
   request: NextRequest,
@@ -8,6 +8,7 @@ export async function PUT(
 ) {
   try {
     const activityId = parseInt(context.params.id, 10);
+    const organizerId = parseInt(request.headers.get('X-User-Id') || '0', 10);
     const body = await request.json();
 
     if (typeof body.status === 'undefined') {
@@ -18,9 +19,7 @@ export async function PUT(
       });
     }
 
-    const activity = await updateActivity(activityId, null, {
-      status: body.status
-    });
+    const activity = await updateActivityStatus(activityId, organizerId, body.status);
 
     return NextResponse.json({
       code: 200,

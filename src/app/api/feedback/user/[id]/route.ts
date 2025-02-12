@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const userId = Number(params.id);
-    const searchParams = request.nextUrl.searchParams;
+    const { searchParams } = request.nextUrl;
     const page = Number(searchParams.get('page')) || 1;
     const pageSize = Number(searchParams.get('pageSize')) || 10;
 

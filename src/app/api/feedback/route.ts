@@ -6,7 +6,7 @@ import { getActivity } from '@/service/activity.service';
 export async function GET(request: NextRequest) {
   try {
     // 获取查询参数
-    const searchParams = request.nextUrl.searchParams;
+    const { searchParams } = request.nextUrl;
     const activityId = Number(searchParams.get('activityId'));
     const page = Number(searchParams.get('page')) || 1;
     const pageSize = Number(searchParams.get('pageSize')) || 10;
