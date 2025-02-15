@@ -27,6 +27,13 @@ const getToken = () => {
   return null;
 };
 
+// 添加这个函数用于页面跳转
+const redirectToLogin = () => {
+  if (typeof window !== 'undefined') {
+    window.location.href = '/login';
+  }
+};
+
 const request = async <T = any>(url: string, options: RequestOptions = {}): Promise<APIResponse<T>> => {
   const {
     params,
@@ -70,6 +77,27 @@ const request = async <T = any>(url: string, options: RequestOptions = {}): Prom
 
     const result = await response.json() as APIResponse<T>;
 
+    // 处理 401 状态码
+    if (response.status === 401) {
+      // 清空本地存储
+      useUserStore.getState().clearUserInfo();
+      
+      // 调用登出接口
+      await fetch('/api/sign-out', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      // 如果不是登出接口本身的请求，则跳转到登录页面并抛出错误
+      if (url !== '/api/sign-out') {
+        redirectToLogin();
+        throw new RequestError(result.message, result.code, result.data);
+      }
+    }
+
     if (!response.ok) {
       throw new RequestError(result.message, result.code, result.data);
     }
@@ -96,7 +124,7 @@ export const put = <T = any>(url: string, data?: any, options?: RequestOptions) 
 
 export const del = <T = any>(url: string, options?: RequestOptions) => request<T>(url, { ...options, method: 'DELETE' });
 
-export const patch = <T = any>(url: string, data?: any, options?: RequestOptions) => 
+export const patch = <T = any>(url: string, data?: any, options?: RequestOptions) =>
   request<T>(url, { ...options, method: 'PATCH', data });
 
 export const head = <T = any>(url: string, options?: RequestOptions) => 

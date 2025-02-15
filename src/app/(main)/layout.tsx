@@ -9,11 +9,13 @@ export default function RootLayout({
 }>) {
   return (
 
-      <div className='w-full flex flex-col justify-start items-center'>
-        {/* <div  className='w-full'> */}
-          <NavBar />
-          {children}
-        {/* </div> */}
-      </div>
+    <div className='w-full flex flex-col justify-start items-center'>
+      {/* <div  className='w-full'> */}
+      <NavBar />
+      {children}
+      {/* </div> */}
+    </div>
   );
 }
+
+

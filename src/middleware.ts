@@ -7,6 +7,7 @@ import { APIStatusCode } from '@/schema/api-response.schema';
 const PUBLIC_ROUTES = [
   '/api/sign-up',
   '/api/sign-in',
+  '/api/sign-out',
   '/api/category',
   '/api/activity',          // 活动列表
   '/api/activity/[0-9]+',   // 活动详情（使用正则匹配数字ID）
@@ -41,11 +42,14 @@ export async function middleware(request: NextRequest) {
 
   if (!token) {
     console.log('未找到token，用户未登录');
-    return NextResponse.json({
-      code: APIStatusCode.UNAUTHORIZED,
-      message: '未登录',
-      data: null
-    });
+    return NextResponse.json(
+      {
+        code: APIStatusCode.UNAUTHORIZED,
+        message: '未登录',
+        data: null
+      },
+      { status: 401 }  // 添加 HTTP 401 Unauthorized 状态码
+    );
   }
 
   try {
@@ -68,11 +72,14 @@ export async function middleware(request: NextRequest) {
     });
   } catch (error: any) {
     console.log('token验证失败:', error.message);
-    return NextResponse.json({
-      code: APIStatusCode.INVALID_TOKEN,
-      message: '无效的token',
-      data: null
-    });
+    return NextResponse.json(
+      {
+        code: APIStatusCode.INVALID_TOKEN,
+        message: '无效的token',
+        data: null
+      },
+      { status: 401 }  // 添加 HTTP 401 Unauthorized 状态码
+    );
   }
 }
 
