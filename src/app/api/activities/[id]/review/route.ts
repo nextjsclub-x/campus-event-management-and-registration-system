@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { APIStatusCode } from '@/schema/api-response.schema';
-import { reviewActivity, rejectActivity } from '@/service/activity.service';
+import { reviewActivity } from '@/service/activity.service';
 
 export const runtime = 'nodejs';
 

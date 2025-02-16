@@ -15,7 +15,8 @@ export default function RootLayout({
     >
       <body className='flex flex-col justify-start items-center w-full'>
         {/* <div  className='w-full'> */}
-          {children}
+        {children}
+
         {/* </div> */}
       </body>
     </html>

@@ -12,6 +12,8 @@ import {
   getActivitiesByOrganizer as modelGetActivitiesByOrganizer
 } from '@/models/activity.model';
 
+import { createNotification } from '@/models/notification.model';
+
 // 导出活动状态常量
 export { ActivityStatus, type ActivityStatusType };
 
@@ -159,4 +161,120 @@ export async function unpublishActivity(activityId: number, organizerId: number)
  */
 export async function getActivitiesByOrganizer(organizerId: number) {
   return modelGetActivitiesByOrganizer(organizerId);
+}
+
+/**
+ * 检查活动容量信息
+ * @param activityId 活动ID
+ * @returns 返回活动容量信息
+ */
+export async function checkActivityCapacity(activityId: number) {
+  const activity = await modelGetActivity(activityId);
+  if (!activity) {
+    throw new Error('活动不存在');
+  }
+  
+  // TODO: 需要从注册服务中获取已注册人数
+  const registeredCount = 0; // 这里需要实现获取已注册人数的逻辑
+  
+  return {
+    capacity: activity.capacity,
+    registered: registeredCount,
+    available: activity.capacity - registeredCount
+  };
+}
+
+/**
+ * 更新活动容量
+ * @param activityId 活动ID
+ * @param organizerId 组织者ID
+ * @param newCapacity 新的容量
+ * @returns 返回更新后的活动信息
+ */
+export async function updateActivityCapacity(
+  activityId: number,
+  organizerId: number,
+  newCapacity: number
+) {
+  if (newCapacity < 0) {
+    throw new Error('活动容量不能小于0');
+  }
+  
+  return modelUpdateActivity(activityId, organizerId, {
+    capacity: newCapacity
+  });
+}
+
+/**
+ * 审核活动
+ * @param activityId 活动ID
+ * @param approved 是否通过
+ * @param reviewerId 审核者ID
+ * @param reason 审核原因
+ * @returns 返回更新后的活动信息
+ */
+export async function reviewActivity(
+  activityId: number,
+  approved: boolean,
+  reviewerId: number,
+  reason?: string
+) {
+  const activity = await getActivity(activityId);
+  
+  if (!activity) {
+    throw new Error('活动不存在');
+  }
+
+  // 更新活动状态
+  const newStatus = approved ? ActivityStatus.PUBLISHED : ActivityStatus.DRAFT;
+  const updatedActivity = await modelUpdateActivityStatus(activityId, reviewerId, newStatus);
+  
+  // 发送通知给活动组织者
+  await createNotification(
+    activity.organizerId,
+    activityId,
+    `您的活动「${activity.title}」${approved ? '已通过审核' : '审核未通过'}${reason ? `，原因：${reason}` : ''}`
+  );
+  
+  return updatedActivity;
+}
+
+/**
+ * 检查活动时间冲突
+ * @param organizerId 组织者ID
+ * @param startTime 开始时间
+ * @param endTime 结束时间
+ * @param excludeActivityId 需要排除的活动ID（用于编辑时）
+ * @returns 返回冲突的活动列表
+ */
+export async function checkActivityTimeConflict(
+  organizerId: number,
+  startTime: Date,
+  endTime: Date,
+  excludeActivityId?: number
+) {
+  // 获取该组织者的所有活动
+  const activities = await modelGetActivitiesByOrganizer(organizerId);
+
+  // 过滤出已发布的活动，并检查时间冲突
+  const conflicts = activities.filter(activity => {
+    if (
+      activity.status !== ActivityStatus.PUBLISHED ||
+      (excludeActivityId && activity.id === excludeActivityId)
+    ) {
+      return false;
+    }
+
+    const activityStart = new Date(activity.startTime);
+    const activityEnd = new Date(activity.endTime);
+
+    // 检查是否有时间重叠
+    return (
+      (startTime >= activityStart && startTime < activityEnd) ||
+      (endTime > activityStart && endTime <= activityEnd) ||
+      (startTime <= activityStart && endTime >= activityEnd)
+    );
+  });
+
+  return conflicts;
 }

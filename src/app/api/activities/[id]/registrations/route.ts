@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { APIStatusCode } from '@/schema/api-response.schema';
-import { getRegistrations } from '@/service/registration.service';
+import { getRegistrations, RegistrationStatus } from '@/service/registration.service';
 import { getActivity } from '@/service/activity.service';
 
 export const runtime = 'nodejs';
@@ -14,8 +14,9 @@ export async function GET(
     const activityId = Number(params.id);
     const organizerId = Number(request.headers.get('X-User-Id'));
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status') 
-      ? Number(searchParams.get('status'))
+    const rawStatus = searchParams.get('status');
+    const status = rawStatus 
+      ? Number(rawStatus) as typeof RegistrationStatus[keyof typeof RegistrationStatus]
       : undefined;
 
     if (!organizerId) {

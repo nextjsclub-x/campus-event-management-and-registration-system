@@ -5,6 +5,7 @@
 import {
   RegistrationStatus,
   getUserRegistrations,
+  getActivityRegistrations,
   updateRegistrationStatus as modelUpdateRegistrationStatus,
   registerActivity,
   getRegistrationStatus
@@ -12,8 +13,9 @@ import {
 
 import { createNotification } from '@/models/notification.model';
 import { getActivity, ActivityStatus } from '@/models/activity.model';
-import { eq } from 'drizzle-orm';
-import { db } from '@/db';
+
+// 导出报名状态常量
+export { RegistrationStatus };
 
 // 创建报名
 export async function createRegistration(userId: number, activityId: number) {
@@ -48,7 +50,7 @@ export async function updateRegistrationStatus(
   newStatus: number
 ) {
   // 获取报名列表来获取完整的报名信息
-  const { registrations } = await getUserRegistrations(registrationId, {
+  const { registrations } = await getActivityRegistrations(registrationId, {
     page: 1,
     pageSize: 1
   });
@@ -86,9 +88,9 @@ export async function updateRegistrationStatus(
 // 获取报名列表
 export async function getRegistrations(
   activityId: number,
-  status?: RegistrationStatus
+  status?: typeof RegistrationStatus[keyof typeof RegistrationStatus]
 ) {
-  const result = await getUserRegistrations(activityId, {
+  const result = await getActivityRegistrations(activityId, {
     status,
     page: 1,
     pageSize: 100
@@ -100,19 +102,16 @@ export async function getRegistrations(
   };
 }
 
-// 添加 getRegistration 方法
+// 获取单个报名信息
 export async function getRegistration(registrationId: number) {
-  const registration = await db.query.registrations.findFirst({
-    where: eq(registrations.id, registrationId),
-    with: {
-      user: true,
-      activity: true
-    }
+  const { registrations } = await getActivityRegistrations(registrationId, {
+    page: 1,
+    pageSize: 1
   });
 
-  if (!registration) {
+  if (!registrations.length) {
     throw new Error('报名记录不存在');
   }
 
-  return registration;
+  return registrations[0];
 } 
