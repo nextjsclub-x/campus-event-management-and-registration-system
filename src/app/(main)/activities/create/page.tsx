@@ -25,6 +25,7 @@ interface ActivityFormData {
   startTime: string;
   endTime: string;
   location: string;
+  
   capacity: string;
   categoryId: string;
 }

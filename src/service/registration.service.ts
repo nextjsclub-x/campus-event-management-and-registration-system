@@ -3,7 +3,6 @@
  * 处理活动报名相关的业务逻辑
  */
 import {
-  RegistrationStatus,
   getUserRegistrations,
   getActivityRegistrations,
   updateRegistrationStatus as modelUpdateRegistrationStatus,
@@ -13,6 +12,7 @@ import {
 
 import { createNotification } from '@/models/notification.model';
 import { getActivity, ActivityStatus } from '@/models/activity.model';
+import { RegistrationStatus } from '@/schema/registration.schema';
 
 // 导出报名状态常量
 export { RegistrationStatus };
@@ -114,4 +114,77 @@ export async function getRegistration(registrationId: number) {
   }
 
   return registrations[0];
+}
+
+/**
+ * 取消报名
+ * @param registrationId 报名ID
+ * @param userId 用户ID（用于验证权限）
+ */
+export async function cancelRegistration(registrationId: number, userId: number) {
+  const registration = await getRegistration(registrationId);
+  
+  if (!registration) {
+    throw new Error('报名记录不存在');
+  }
+
+  // 验证是否是用户本人操作
+  if (registration.userId !== userId) {
+    throw new Error('无权限操作');
+  }
+
+  // 获取活动信息
+  const activity = await getActivity(registration.activityId);
+  
+  // 检查活动是否已开始
+  if (new Date(activity.startTime) <= new Date()) {
+    throw new Error('活动已开始，无法取消报名');
+  }
+
+  // 更新报名状态为已取消
+  const updatedRegistration = await modelUpdateRegistrationStatus(
+    registrationId,
+    RegistrationStatus.CANCELLED,
+    userId
+  );
+
+  // 发送通知给活动组织者
+  await createNotification(
+    activity.organizerId,
+    activity.id,
+    `用户已取消报名：${registration.id}`
+  );
+
+  return updatedRegistration;
+}
+
+/**
+ * 检查用户是否已报名活动
+ * @param userId 用户ID
+ * @param activityId 活动ID
+ * @returns 返回报名信息，如果未报名返回null
+ */
+export async function checkUserRegistration(userId: number, activityId: number) {
+  const { registrations } = await getUserRegistrations(userId, {
+    page: 1,
+    pageSize: 1,
+    status: RegistrationStatus.CONFIRMED // 只检查已确认的报名
+  });
+
+  // 从结果中筛选指定活动的报名
+  const registration = registrations.find(reg => reg.activityId === activityId);
+  return registration || null;
+}
+
+/**
+ * 获取活动的报名人数
+ * @param activityId 活动ID
+ * @returns 返回有效报名人数（已确认的）
+ */
+export async function getActivityRegistrationCount(activityId: number) {
+  const { registrations } = await getActivityRegistrations(activityId, {
+    status: RegistrationStatus.CONFIRMED // 只计算已确认的报名
+  });
+
+  return registrations.length;
 } 

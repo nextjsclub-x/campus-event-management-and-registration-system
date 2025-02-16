@@ -30,7 +30,6 @@ export const useUserStore = create<UserState>()(
         role: null,
         username: null
       }),
-
       clearUserInfo: () => set({
         token: null,
         userId: null,

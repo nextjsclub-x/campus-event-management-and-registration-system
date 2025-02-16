@@ -12,10 +12,15 @@ import {
   getActivitiesByOrganizer as modelGetActivitiesByOrganizer
 } from '@/models/activity.model';
 
+import { activities } from '@/schema/activity.schema';
 import { createNotification } from '@/models/notification.model';
+import { getActivityRegistrationCount } from './registration.service';
 
 // 导出活动状态常量
 export { ActivityStatus, type ActivityStatusType };
+
+// 使用drizzle的类型推导
+type Activity = typeof activities.$inferSelect;
 
 // 服务层方法实现
 
@@ -116,7 +121,20 @@ export async function listActivities(filters: {
   orderBy?: 'startTime' | 'createdAt';
   order?: 'asc' | 'desc';
 }) {
-  return modelListActivities(filters);
+  const result = await modelListActivities(filters);
+
+  // 获取每个活动的报名人数
+  const activitiesWithRegistrations = await Promise.all(
+    result.activities.map(async (activity: typeof result.activities[number]) => ({
+      ...activity,
+      currentRegistrations: await getActivityRegistrationCount(activity.id)
+    }))
+  );
+
+  return {
+    activities: activitiesWithRegistrations,
+    pagination: result.pagination
+  };
 }
 
 /**
@@ -174,8 +192,8 @@ export async function checkActivityCapacity(activityId: number) {
     throw new Error('活动不存在');
   }
   
-  // TODO: 需要从注册服务中获取已注册人数
-  const registeredCount = 0; // 这里需要实现获取已注册人数的逻辑
+  // 获取已注册人数
+  const registeredCount = await getActivityRegistrationCount(activityId);
   
   return {
     capacity: activity.capacity,
@@ -277,4 +295,25 @@ export async function checkActivityTimeConflict(
   });
 
   return conflicts;
+}
+
+/**
+ * 获取活动列表
+ * @param options 查询选项
+ */
+export async function getActivities(options: GetActivitiesOptions = {}) {
+  const { activities, pagination } = await modelGetActivities(options);
+
+  // 获取每个活动的报名人数
+  const activitiesWithRegistrations = await Promise.all(
+    activities.map(async (activity) => ({
+      ...activity,
+      currentRegistrations: await getActivityRegistrationCount(activity.id)
+    }))
+  );
+
+  return {
+    activities: activitiesWithRegistrations,
+    pagination
+  };
 }

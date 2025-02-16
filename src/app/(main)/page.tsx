@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Bell } from 'lucide-react';
 import { useUserStore } from '@/store/user';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Carousel } from '@/components/Carousel';
 
 interface Activity {
   id: number;
@@ -210,6 +211,9 @@ export default function HomePage() {
   return (
     <main className='flex-1 w-full mx-auto px-4 py-8'>
       <div className='space-y-6'>
+        <div className="mb-8">
+          <Carousel />
+        </div>
         <h2 className='text-3xl font-bold'>近期活动</h2>
 
         {token && upcomingActivities.length > 0 && (
