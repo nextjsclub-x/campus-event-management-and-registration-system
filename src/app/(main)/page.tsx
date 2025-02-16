@@ -58,14 +58,14 @@ export default function HomePage() {
 
   const fetchActivities = async (status?: string) => {
     try {
-      let url = '/api/activity';
+      let url = '/api/activities';
 
       // If the user selected "已结束" (ended), we still fetch published(2) first
       // and then filter out the ended ones.
       if (status === 'ended') {
-        url = `/api/activity?status=${ActivityStatus.PUBLISHED}`;
+        url = `/api/activities?status=${ActivityStatus.PUBLISHED}`;
       } else if (status && status !== 'all') {
-        url = `/api/activity?status=${status}`;
+        url = `/api/activities?status=${status}`;
       }
 
       // Always order by startTime descending
@@ -111,7 +111,7 @@ export default function HomePage() {
     const fetchUpcomingActivities = async () => {
       if (!token) return;
       try {
-        const response = await get('/api/activity?status=2');
+        const response = await get('/api/activities?status=2');
         if (response.code === APIStatusCode.OK) {
           setUpcomingActivities(response.data.activities);
         }
