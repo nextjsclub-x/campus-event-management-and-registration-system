@@ -16,6 +16,17 @@ import { useUserStore } from '@/store/user';
 // 活动状态类型
 type ActivityStatus = 'upcoming' | 'ongoing' | 'ended';
 
+// 报名记录接口
+interface Registration {
+  id: number;
+  userId: number;
+  user: {
+    username: string;
+  };
+  registeredAt: string;
+  status: number;
+}
+
 // 活动接口
 interface Activity {
   id: number;
@@ -46,6 +57,8 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [loadingRegistrations, setLoadingRegistrations] = useState(false);
 
   // 将数字状态转换为字符串状态
   const getActivityStatus = (activity: Activity): ActivityStatus => {
@@ -81,8 +94,28 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
     }
   };
 
+  // 获取报名记录
+  const fetchRegistrations = async () => {
+    try {
+      setLoadingRegistrations(true);
+      const response = await get(`/api/registrations?activityId=${params.id}`);
+      if (response.code === 200) {
+        setRegistrations(response.data.registrations);
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: '获取报名记录失败',
+        description: '请稍后重试'
+      });
+    } finally {
+      setLoadingRegistrations(false);
+    }
+  };
+
   useEffect(() => {
     fetchActivityDetail();
+    fetchRegistrations();
   }, [params.id]);
 
   // 格式化日期
@@ -107,6 +140,19 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
+  // 获取报名状态标签
+  const getRegistrationStatusBadge = (status: number) => {
+    const statusConfig = {
+      0: { label: '待审核', variant: 'secondary' as const },
+      1: { label: '已确认', variant: 'default' as const },
+      2: { label: '已取消', variant: 'destructive' as const },
+      3: { label: '已拒绝', variant: 'destructive' as const },
+    };
+    
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig[0];
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
   // 处理报名
   const handleRegistration = async () => {
     if (!userId) {
@@ -120,8 +166,8 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
 
     try {
       setRegistering(true);
-      const response = await post(`/api/activities/${params.id}/register`, {
-        userId,
+      const response = await post('/api/registrations', {
+        activityId: parseInt(params.id, 10)
       });
 
       if (response.code === 200) {
@@ -129,7 +175,11 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
           title: '报名成功',
           description: '您已成功报名参加活动',
         });
-        fetchActivityDetail(); // 刷新活动详情
+        // 刷新活动详情和报名列表
+        await Promise.all([
+          fetchActivityDetail(),
+          fetchRegistrations()
+        ]);
       }
     } catch (error: any) {
       toast({
@@ -144,18 +194,39 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
 
   // 处理取消报名
   const handleCancelRegistration = async () => {
+    if (!activity?.isRegistered) {
+      return;
+    }
+
     try {
       setRegistering(true);
-      const response = await post(`/api/activities/${params.id}/unregister`, {
-        userId,
-      });
+      // 首先获取用户在此活动的报名记录
+      const registrationResponse = await get(`/api/registrations?activityId=${params.id}`);
+      if (registrationResponse.code !== 200) {
+        throw new Error('获取报名记录失败');
+      }
+
+      const userRegistration = registrationResponse.data.registrations.find(
+        (reg: Registration) => reg.userId === userId
+      );
+
+      if (!userRegistration) {
+        throw new Error('未找到报名记录');
+      }
+
+      // 调用取消报名接口
+      const response = await post(`/api/registrations/${userRegistration.id}/cancel`, {});
 
       if (response.code === 200) {
         toast({
           title: '取消成功',
           description: '您已成功取消报名',
         });
-        fetchActivityDetail(); // 刷新活动详情
+        // 刷新活动详情和报名列表
+        await Promise.all([
+          fetchActivityDetail(),
+          fetchRegistrations()
+        ]);
       }
     } catch (error: any) {
       toast({
@@ -193,10 +264,12 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
             {userId && getActivityStatus(activity) === 'upcoming' && (
               <Button
                 onClick={activity.isRegistered ? handleCancelRegistration : handleRegistration}
-                disabled={registering}
+                disabled={registering || activity.currentParticipants >= activity.capacity}
                 variant={activity.isRegistered ? 'destructive' : 'default'}
               >
-                {registering ? '处理中...' : (activity.isRegistered ? '取消报名' : '立即报名')}
+                {registering ? '处理中...' : 
+                  activity.isRegistered ? '取消报名' : 
+                  activity.currentParticipants >= activity.capacity ? '名额已满' : '立即报名'}
               </Button>
             )}
           </div>
@@ -244,6 +317,34 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
                 <li>如有特殊情况请提前与组织者联系</li>
                 <li>请遵守活动场地的相关规定</li>
               </ul>
+            </div>
+
+            {/* 报名记录 */}
+            <Separator />
+            <div>
+              <h3 className='text-lg font-semibold mb-2'>报名记录</h3>
+              {loadingRegistrations ? (
+                <p className='text-muted-foreground'>加载中...</p>
+              ) : registrations.length > 0 ? (
+                <div className='space-y-4'>
+                  {registrations.map((registration) => (
+                    <div
+                      key={registration.id}
+                      className='flex items-center justify-between p-4 rounded-lg border'
+                    >
+                      <div className='space-y-1'>
+                        <div className='font-medium'>{registration.user.username}</div>
+                        <div className='text-sm text-muted-foreground'>
+                          报名时间：{formatDate(registration.registeredAt)}
+                        </div>
+                      </div>
+                      {getRegistrationStatusBadge(registration.status)}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className='text-muted-foreground'>暂无报名记录</p>
+              )}
             </div>
           </div>
         </CardContent>
