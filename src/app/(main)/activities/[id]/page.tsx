@@ -12,6 +12,10 @@ import { get, post } from '@/utils/request/request';
 import { useToast } from '@/hooks/use-toast';
 import { useUserStore } from '@/store/user';
 
+// 活动状态类型
+type ActivityStatus = 'upcoming' | 'ongoing' | 'ended';
+
+// 活动接口
 interface Activity {
   id: number;
   title: string;
@@ -29,7 +33,7 @@ interface Activity {
     id: number;
     username: string;
   };
-  status: 'upcoming' | 'ongoing' | 'ended';
+  status: number;  // 改为数字类型，因为后端返回的是数字
   isRegistered?: boolean;
 }
 
@@ -42,11 +46,26 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
 
+  // 将数字状态转换为字符串状态
+  const getActivityStatus = (activity: Activity): ActivityStatus => {
+    const now = new Date();
+    const startTime = new Date(activity.startTime);
+    const endTime = new Date(activity.endTime);
+
+    if (endTime < now) {
+      return 'ended';
+    }
+    if (startTime <= now && now <= endTime) {
+      return 'ongoing';
+    }
+    return 'upcoming';
+  };
+
   // 获取活动详情
   const fetchActivityDetail = async () => {
     try {
       setLoading(true);
-      const response = await get(`/api/activity/${params.id}`);
+      const response = await get(`/api/activities/${params.id}`);
       if (response.code === 200) {
         setActivity(response.data);
       }
@@ -75,14 +94,16 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
     });
 
   // 获取活动状态标签
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (activity: Activity) => {
+    const status = getActivityStatus(activity);
     const statusConfig = {
-      upcoming: { label: '即将开始', variant: 'secondary' },
-      ongoing: { label: '进行中', variant: 'success' },
-      ended: { label: '已结束', variant: 'destructive' },
-    };
-    const config = statusConfig[status as keyof typeof statusConfig];
-    return <Badge variant={config.variant as any}>{config.label}</Badge>;
+      upcoming: { label: '即将开始', variant: 'secondary' as const },
+      ongoing: { label: '进行中', variant: 'default' as const },
+      ended: { label: '已结束', variant: 'destructive' as const },
+    } as const;
+    
+    const config = statusConfig[status];
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
   // 处理报名
@@ -98,7 +119,7 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
 
     try {
       setRegistering(true);
-      const response = await post(`/api/activity/${params.id}/register`, {
+      const response = await post(`/api/activities/${params.id}/register`, {
         userId,
       });
 
@@ -124,7 +145,7 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
   const handleCancelRegistration = async () => {
     try {
       setRegistering(true);
-      const response = await post(`/api/activity/${params.id}/unregister`, {
+      const response = await post(`/api/activities/${params.id}/unregister`, {
         userId,
       });
 
@@ -162,13 +183,13 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
             <div>
               <CardTitle className='text-2xl mb-2'>{activity.title}</CardTitle>
               <div className='flex items-center gap-2'>
-                {getStatusBadge(activity.status)}
+                {getStatusBadge(activity)}
                 <Badge variant='outline'>
-                  {activity.category.name}
+                  {activity.category?.name || '未分类'}
                 </Badge>
               </div>
             </div>
-            {userId && activity.status === 'upcoming' && (
+            {userId && getActivityStatus(activity) === 'upcoming' && (
               <Button
                 onClick={activity.isRegistered ? handleCancelRegistration : handleRegistration}
                 disabled={registering}
@@ -207,7 +228,7 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
                 <div className='space-y-2'>
                   <p>📍 地点：{activity.location}</p>
                   <p>👥 报名情况：{activity.currentParticipants}/{activity.capacity}</p>
-                  <p>👤 组织者：{activity.organizer.username}</p>
+                  <p>👤 组织者：{activity.organizer?.username || '未知'}</p>
                 </div>
               </div>
             </div>

@@ -9,8 +9,9 @@ const PUBLIC_ROUTES = [
   '/api/sign-in',
   '/api/sign-out',
   '/api/category',
-  '/api/activities',          // 活动列表
-  '/api/activities/[0-9]+',   // 活动详情（使用正则匹配数字ID）
+  '/api/activities',
+  '/api/activities/[0-9]+',
+  '/.*', // 匹配根路径后的所有内容
 ] as const;
 
 export async function middleware(request: NextRequest) {

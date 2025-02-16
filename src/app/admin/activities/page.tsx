@@ -45,7 +45,7 @@ export default function AdminActivitiesPage() {
   const fetchActivities = async () => {
     try {
       const params = statusFilter !== 'all' ? `?status=${statusFilter}` : '';
-      const response = await get(`/api/activity${params}`);
+      const response = await get(`/api/activities${params}`);
       if (response.code === APIStatusCode.OK) {
         setActivities(response.data.activities);
       } else {
@@ -61,7 +61,7 @@ export default function AdminActivitiesPage() {
 
   const handleStatusChange = async (activityId: number, newStatus: number) => {
     try {
-      const response = await put(`/api/activity/${activityId}/status`, { status: newStatus });
+      const response = await put(`/api/activities/${activityId}/status`, { status: newStatus });
       if (response.code === APIStatusCode.OK) {
         // 更新成功后刷新列表
         fetchActivities();

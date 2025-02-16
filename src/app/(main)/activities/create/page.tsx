@@ -126,7 +126,7 @@ const CreateActivityPage = () => {
         categoryId: parseInt(formData.categoryId, 10)
       };
 
-      await post('/api/activity/create', requestData);
+      await post('/api/activities/create', requestData);
 
       toast({
         title: '创建成功',

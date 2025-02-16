@@ -77,7 +77,7 @@ const ActivitiesPage = () => {
         ...(filters.search && { search: filters.search }),
       });
 
-      const response = await get(`/api/activity?${  queryParams.toString()}`);
+      const response = await get(`/api/activities?${  queryParams.toString()}`);
       if (response.code === 200) {
         setActivities(response.data.activities);
         setTotalPages(response.data.totalPages);
