@@ -7,7 +7,7 @@ import {
   getActivityRegistrations,
   updateRegistrationStatus as modelUpdateRegistrationStatus,
   registerActivity,
-  getRegistrationStatus
+  // getRegistrationStatus
 } from '@/models/registration.model';
 
 import { createNotification } from '@/models/notification.model';

@@ -201,7 +201,7 @@ export async function listActivities(filters: {
   // 1. 构建查询条件
   const conditions = [];
   
-  if (status !== undefined) {
+  if (status !== undefined && status !== null) {
     conditions.push(eq(activities.status, status));
   }
   

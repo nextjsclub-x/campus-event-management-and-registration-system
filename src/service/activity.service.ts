@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-shadow */
 import {
   ActivityStatus,
   type ActivityStatusType,
@@ -21,6 +22,18 @@ export { ActivityStatus, type ActivityStatusType };
 
 // 使用drizzle的类型推导
 type Activity = typeof activities.$inferSelect;
+
+// 活动查询选项接口
+interface GetActivitiesOptions {
+  status?: ActivityStatusType;
+  categoryId?: number;
+  startTime?: Date;
+  endTime?: Date;
+  page?: number;
+  pageSize?: number;
+  orderBy?: 'startTime' | 'createdAt';
+  order?: 'asc' | 'desc';
+}
 
 // 服务层方法实现
 
@@ -302,11 +315,11 @@ export async function checkActivityTimeConflict(
  * @param options 查询选项
  */
 export async function getActivities(options: GetActivitiesOptions = {}) {
-  const { activities, pagination } = await modelGetActivities(options);
+  const { activities, pagination } = await modelListActivities(options);
 
   // 获取每个活动的报名人数
   const activitiesWithRegistrations = await Promise.all(
-    activities.map(async (activity) => ({
+    activities.map(async (activity: typeof activities[number]) => ({
       ...activity,
       currentRegistrations: await getActivityRegistrationCount(activity.id)
     }))

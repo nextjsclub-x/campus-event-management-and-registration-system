@@ -23,8 +23,8 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/ui/pagination';
+import { Badge } from '@/components/ui/badge';
 
 // 活动接口
 interface Activity {
@@ -77,7 +77,7 @@ const ActivitiesPage = () => {
         ...(filters.search && { search: filters.search }),
       });
 
-      const response = await get('/api/activity?' + queryParams.toString());
+      const response = await get(`/api/activity?${  queryParams.toString()}`);
       if (response.code === 200) {
         setActivities(response.data.activities);
         setTotalPages(response.data.totalPages);
@@ -114,15 +114,13 @@ const ActivitiesPage = () => {
   }, [currentPage, filters]);
 
   // 格式化日期
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('zh-CN', {
+  const formatDate = (dateString: string) => new Date(dateString).toLocaleString('zh-CN', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
 
   // 获取活动状态标签
   const getStatusBadge = (status: string) => {
@@ -136,9 +134,9 @@ const ActivitiesPage = () => {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">活动列表</h1>
+    <div className='container mx-auto py-8'>
+      <div className='flex justify-between items-center mb-6'>
+        <h1 className='text-3xl font-bold'>活动列表</h1>
         {userId && (
           <Button onClick={() => router.push('/activities/create')}>
             创建活动
@@ -147,9 +145,9 @@ const ActivitiesPage = () => {
       </div>
 
       {/* 筛选区域 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-6'>
         <Input
-          placeholder="搜索活动..."
+          placeholder='搜索活动...'
           value={filters.search}
           onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
         />
@@ -157,12 +155,13 @@ const ActivitiesPage = () => {
           value={filters.category}
           onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}>
           <SelectTrigger>
-            <SelectValue placeholder="选择分类" />
+            <SelectValue placeholder='选择分类' />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">全部分类</SelectItem>
+            <SelectItem value=''>全部分类</SelectItem>
             {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id.toString()}>
+              <SelectItem key={category.id}
+                value={category.id.toString()}>
                 {category.name}
               </SelectItem>
             ))}
@@ -172,32 +171,33 @@ const ActivitiesPage = () => {
           value={filters.status}
           onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
           <SelectTrigger>
-            <SelectValue placeholder="活动状态" />
+            <SelectValue placeholder='活动状态' />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">全部状态</SelectItem>
-            <SelectItem value="upcoming">即将开始</SelectItem>
-            <SelectItem value="ongoing">进行中</SelectItem>
-            <SelectItem value="ended">已结束</SelectItem>
+            <SelectItem value=''>全部状态</SelectItem>
+            <SelectItem value='upcoming'>即将开始</SelectItem>
+            <SelectItem value='ongoing'>进行中</SelectItem>
+            <SelectItem value='ended'>已结束</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* 活动列表 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
         {activities.map((activity) => (
-          <Card key={activity.id} className="hover:shadow-lg transition-shadow">
+          <Card key={activity.id}
+            className='hover:shadow-lg transition-shadow'>
             <CardHeader>
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-xl">{activity.title}</CardTitle>
+              <div className='flex justify-between items-start'>
+                <CardTitle className='text-xl'>{activity.title}</CardTitle>
                 {getStatusBadge(activity.status)}
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-4 line-clamp-2">
+              <p className='text-muted-foreground mb-4 line-clamp-2'>
                 {activity.description}
               </p>
-              <div className="space-y-2 text-sm">
+              <div className='space-y-2 text-sm'>
                 <p>🕒 开始时间：{formatDate(activity.startTime)}</p>
                 <p>📍 地点：{activity.location}</p>
                 <p>👥 报名情况：{activity.currentParticipants}/{activity.capacity}</p>
@@ -206,9 +206,9 @@ const ActivitiesPage = () => {
             </CardContent>
             <CardFooter>
               <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => router.push('/activities/' + activity.id)}
+                variant='outline'
+                className='w-full'
+                onClick={() => router.push(`/activities/${  activity.id}`)}
               >
                 查看详情
               </Button>
@@ -219,15 +219,16 @@ const ActivitiesPage = () => {
 
       {/* 分页 */}
       {totalPages > 1 && (
-        <div className="mt-8">
+        <div className='mt-8'>
           <Pagination>
             <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                />
-              </PaginationItem>
+              {currentPage > 1 && (
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  />
+                </PaginationItem>
+              )}
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <PaginationItem key={page}>
                   <PaginationLink
@@ -238,12 +239,13 @@ const ActivitiesPage = () => {
                   </PaginationLink>
                 </PaginationItem>
               ))}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                />
-              </PaginationItem>
+              {currentPage < totalPages && (
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  />
+                </PaginationItem>
+              )}
             </PaginationContent>
           </Pagination>
         </div>
