@@ -1,7 +1,4 @@
-import { RegistrationStatus } from '@/schema/registration.schema';
-
-export { RegistrationStatus };
-
+import {RegistrationStatus} from '@/constants/enums'
 // 注册查询选项接口
 export interface GetRegistrationsOptions {
   status?: typeof RegistrationStatus[keyof typeof RegistrationStatus];

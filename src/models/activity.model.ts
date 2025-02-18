@@ -1,3 +1,5 @@
+'use server';
+
 import db from '@/database/neon.db';
 import { activities } from '@/schema/activity.schema';
 import {

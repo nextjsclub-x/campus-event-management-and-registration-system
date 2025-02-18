@@ -1,297 +1,267 @@
 import db from '@/database/neon.db';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, sql, type SQL } from 'drizzle-orm';
 import { categories } from '@/schema/category.schema';
 import { activities } from '@/schema/activity.schema';
 import { registrations } from '@/schema/registration.schema';
+import type {
+	PaginationOptions,
+	PaginatedResponse,
+} from '@/types/pagination.types';
+
+// 类型定义
+type Category = typeof categories.$inferSelect;
+type NewCategory = typeof categories.$inferInsert;
+
+interface ActivityFilter {
+	status?: number;
+	startTime?: Date;
+	endTime?: Date;
+}
+
+interface QueryOptions<T> {
+	page?: number;
+	pageSize?: number;
+	filters?: T;
+}
+
+// 错误常量
+const CategoryError = {
+	NOT_FOUND: '分类不存在',
+	NAME_EXISTS: '分类名称已存在',
+} as const;
+
+// 通用工具函数
+async function checkCategoryExists(id: number) {
+	const [category] = await db
+		.select()
+		.from(categories)
+		.where(eq(categories.id, id));
+
+	if (!category) throw new Error(CategoryError.NOT_FOUND);
+	return category;
+}
+
+async function checkCategoryNameExists(name: string, excludeId?: number) {
+	const query = excludeId
+		? and(eq(categories.name, name), sql`${categories.id} != ${excludeId}`)
+		: eq(categories.name, name);
+
+	const [category] = await db.select().from(categories).where(query);
+
+	if (category) throw new Error(CategoryError.NAME_EXISTS);
+}
+
+async function getPaginatedQuery<T extends Record<string, unknown>>(
+	table: string,
+	conditions: SQL<unknown>[],
+	options: PaginationOptions
+): Promise<PaginatedResponse<T>> {
+	const { page = 1, limit = 10 } = options;
+	const offset = (page - 1) * limit;
+
+	// 获取总数
+	const [{ count }] = await db
+		.select({ count: sql`count(*)`.mapWith(Number) })
+		.from(sql.raw(table))
+		.where(and(...conditions));
+
+	// 获取分页数据
+	const items = await db
+		.select()
+		.from(sql.raw(table))
+		.where(and(...conditions))
+		.limit(limit)
+		.offset(offset) as T[];
+
+	const totalPages = Math.ceil(count / limit);
+
+	return {
+		items,
+		total: count,
+		totalPages,
+		currentPage: page,
+		limit,
+		hasNext: page < totalPages,
+		hasPrev: page > 1
+	};
+}
+
+function buildActivityFilters(filters: ActivityFilter) {
+	const conditions = [];
+	const { status, startTime, endTime } = filters;
+
+	if (typeof status !== 'undefined') {
+		conditions.push(eq(activities.status, status));
+	}
+	if (startTime) {
+		conditions.push(sql`${activities.startTime} >= ${startTime}`);
+	}
+	if (endTime) {
+		conditions.push(sql`${activities.endTime} <= ${endTime}`);
+	}
+
+	return conditions;
+}
 
 // ====================
 //  1. 获取分类列表
 // ====================
 export async function getCategories() {
-  const results = await db
-    .select({
-      id: categories.id,
-      name: categories.name,
-      description: categories.description,
-      createdAt: categories.createdAt,
-      updatedAt: categories.updatedAt
-    })
-    .from(categories);
-
-  return results;
+	return db.select().from(categories);
 }
 
 // ====================
 //  2. 创建分类
 // ====================
-interface CategoryData {
-  name: string;
-  description?: string;
-}
+export async function createCategory(categoryData: NewCategory) {
+	await checkCategoryNameExists(categoryData.name);
 
-interface UpdateCategoryData {
-  name?: string;
-  description?: string;
-}
+	const [newCategory] = await db
+		.insert(categories)
+		.values(categoryData)
+		.returning();
 
-export async function createCategory(categoryData: CategoryData) {
-  // 1. 检查分类名是否已存在
-  const [existingCategory] = await db
-    .select()
-    .from(categories)
-    .where(eq(categories.name, categoryData.name));
-
-  if (existingCategory) {
-    throw new Error('Category name already exists');
-  }
-
-  // 2. 创建新分类
-  const [newCategory] = await db
-    .insert(categories)
-    .values({
-      name: categoryData.name,
-      description: categoryData.description
-    })
-    .returning({
-      id: categories.id,
-      name: categories.name,
-      description: categories.description,
-      createdAt: categories.createdAt
-    });
-
-  return newCategory;
+	return newCategory;
 }
 
 // ====================
 //  3. 更新分类
 // ====================
-export async function updateCategory(categoryId: number, categoryData: UpdateCategoryData) {
-  // 1. 检查分类是否存在
-  const [existingCategory] = await db
-    .select()
-    .from(categories)
-    .where(eq(categories.id, categoryId));
+export async function updateCategory(
+	categoryId: number,
+	categoryData: Partial<NewCategory>,
+) {
+	await checkCategoryExists(categoryId);
+	if (categoryData.name) {
+		await checkCategoryNameExists(categoryData.name, categoryId);
+	}
 
-  if (!existingCategory) {
-    throw new Error('Category not found');
-  }
+	await db
+		.update(categories)
+		.set({
+			...categoryData,
+			updatedAt: new Date(),
+		})
+		.where(eq(categories.id, categoryId));
 
-  // 2. 如果要更新名称，检查新名称是否与其他分类重复
-  if (categoryData.name && categoryData.name !== existingCategory.name) {
-    const [duplicateCategory] = await db
-      .select()
-      .from(categories)
-      .where(eq(categories.name, categoryData.name));
-
-    if (duplicateCategory) {
-      throw new Error('Category name already exists');
-    }
-  }
-
-  // 3. 更新分类
-  await db
-    .update(categories)
-    .set({
-      name: categoryData.name,
-      description: categoryData.description,
-      updatedAt: new Date()
-    })
-    .where(eq(categories.id, categoryId));
-
-  return { message: 'Category updated successfully' };
+	return { message: 'Category updated successfully' };
 }
 
 // ====================
 //  4. 获取分类下的活动
 // ====================
-interface ActivityFilter {
-  status?: number;
-  startTime?: Date;
-  endTime?: Date;
-}
-
-interface Pagination {
-  page?: number;
-  pageSize?: number;
-}
-
 export async function getActivitiesByCategory(
-  categoryId: number,
-  filters: ActivityFilter = {},
-  pagination: Pagination = {}
+	categoryId: number,
+	options: PaginationOptions & { filters?: ActivityFilter } = { page: 1, limit: 10 }
 ) {
-  const { status, startTime, endTime } = filters;
-  const { page = 1, pageSize = 10 } = pagination;
-  const offset = (page - 1) * pageSize;
+	await checkCategoryExists(categoryId);
+	
+	const { filters = {} } = options;
+	const conditions = [
+		eq(activities.categoryId, categoryId),
+		...buildActivityFilters(filters)
+	];
 
-  // 1. 检查分类是否存在
-  const [category] = await db
-    .select()
-    .from(categories)
-    .where(eq(categories.id, categoryId));
-
-  if (!category) {
-    throw new Error('Category not found');
-  }
-
-  // 2. 收集查询条件
-  const conditions = [eq(activities.categoryId, categoryId)];
-  if (typeof status !== 'undefined') {
-    conditions.push(eq(activities.status, status));
-  }
-  if (startTime) {
-    conditions.push(sql`${activities.startTime} >= ${startTime}`);
-  }
-  if (endTime) {
-    conditions.push(sql`${activities.endTime} <= ${endTime}`);
-  }
-
-  // 3. 查询总数
-  const [{ count }] = await db
-    .select({ count: sql`count(*)`.mapWith(Number) })
-    .from(activities)
-    .where(and(...conditions));
-
-  // 4. 查询分页数据
-  const results = await db
-    .select({
-      id: activities.id,
-      title: activities.title,
-      description: activities.description,
-      startTime: activities.startTime,
-      endTime: activities.endTime,
-      location: activities.location,
-      capacity: activities.capacity,
-      status: activities.status,
-      createdAt: activities.createdAt
-    })
-    .from(activities)
-    .where(and(...conditions))
-    .limit(pageSize)
-    .offset(offset);
-
-  return {
-    activities: results,
-    total: count
-  };
+	return getPaginatedQuery<typeof activities.$inferSelect>(
+		'activities',
+		conditions,
+		options
+	);
 }
 
 // ====================
 //  5. 设置活动分类
 // ====================
-export async function setActivityCategory(activityId: number, categoryId: number) {
-  // 1. 检查活动是否存在
-  const [activity] = await db
-    .select()
-    .from(activities)
-    .where(eq(activities.id, activityId));
+export async function setActivityCategory(
+	activityId: number,
+	categoryId: number,
+) {
+	const [activity] = await db
+		.select()
+		.from(activities)
+		.where(eq(activities.id, activityId));
 
-  if (!activity) {
-    throw new Error('Activity not found');
-  }
+	if (!activity) {
+		throw new Error('Activity not found');
+	}
 
-  // 2. 检查分类是否存在
-  const [category] = await db
-    .select()
-    .from(categories)
-    .where(eq(categories.id, categoryId));
+	await checkCategoryExists(categoryId);
 
-  if (!category) {
-    throw new Error('Category not found');
-  }
+	await db
+		.update(activities)
+		.set({ categoryId })
+		.where(eq(activities.id, activityId));
 
-  // 3. 更新活动分类
-  await db
-    .update(activities)
-    .set({ categoryId })
-    .where(eq(activities.id, activityId));
-
-  return { message: 'Activity category updated successfully' };
+	return { message: 'Activity category updated successfully' };
 }
 
 // ====================
 //  6. 获取分类统计数据
 // ====================
 export async function getCategoryStats(categoryId: number) {
-  // 1. 检查分类是否存在
-  const [category] = await db
-    .select()
-    .from(categories)
-    .where(eq(categories.id, categoryId));
+	await checkCategoryExists(categoryId);
 
-  if (!category) {
-    throw new Error('Category not found');
-  }
+	const [stats] = await db
+		.select({
+			totalActivities: sql`count(*)`.mapWith(Number),
+			statusStats: sql`
+        json_agg(
+          json_build_object(
+            'status', status,
+            'count', count(*)
+          )
+        )
+      `.mapWith(JSON.parse),
+			recentActivities: sql`
+        json_agg(
+          json_build_object(
+            'id', id,
+            'title', title,
+            'startTime', start_time,
+            'status', status
+          )
+        ) FILTER (WHERE id IN (
+          SELECT id FROM activities 
+          WHERE category_id = ${categoryId}
+          ORDER BY created_at DESC 
+          LIMIT 5
+        ))
+      `.mapWith(JSON.parse),
+		})
+		.from(activities)
+		.where(eq(activities.categoryId, categoryId))
+		.groupBy(activities.categoryId);
 
-  // 2. 获取活动总数
-  const [{ totalActivities }] = await db
-    .select({
-      totalActivities: sql`count(*)`.mapWith(Number)
-    })
-    .from(activities)
-    .where(eq(activities.categoryId, categoryId));
-
-  // 3. 获取各状态活动数量
-  const statusStats = await db
-    .select({
-      status: activities.status,
-      count: sql`count(*)`.mapWith(Number)
-    })
-    .from(activities)
-    .where(eq(activities.categoryId, categoryId))
-    .groupBy(activities.status);
-
-  // 4. 获取最近活动
-  const recentActivities = await db
-    .select({
-      id: activities.id,
-      title: activities.title,
-      startTime: activities.startTime,
-      status: activities.status
-    })
-    .from(activities)
-    .where(eq(activities.categoryId, categoryId))
-    .orderBy(activities.createdAt)
-    .limit(5);
-
-  return {
-    totalActivities,
-    statusStats,
-    recentActivities
-  };
+	return stats;
 }
 
 // ====================
 //  7. 获取各分类活动数量统计
 // ====================
 export async function getCategoryActivityCount() {
-  const stats = await db
-    .select({
-      categoryId: activities.categoryId,
-      categoryName: categories.name,
-      count: sql`count(*)`.mapWith(Number)
-    })
-    .from(activities)
-    .leftJoin(categories, eq(activities.categoryId, categories.id))
-    .groupBy(activities.categoryId, categories.name);
-
-  return stats;
+	return db
+		.select({
+			categoryId: activities.categoryId,
+			categoryName: categories.name,
+			count: sql`count(*)`.mapWith(Number),
+		})
+		.from(activities)
+		.leftJoin(categories, eq(activities.categoryId, categories.id))
+		.groupBy(activities.categoryId, categories.name);
 }
 
 // ====================
 //  8. 获取各分类报名人数统计
 // ====================
 export async function getCategoryRegistrationCount() {
-  const stats = await db
-    .select({
-      categoryId: activities.categoryId,
-      categoryName: categories.name,
-      registrationCount: sql`count(${registrations.id})`.mapWith(Number)
-    })
-    .from(activities)
-    .leftJoin(categories, eq(activities.categoryId, categories.id))
-    .leftJoin(registrations, eq(registrations.activityId, activities.id))
-    .groupBy(activities.categoryId, categories.name);
-
-  return stats;
+	return db
+		.select({
+			categoryId: activities.categoryId,
+			categoryName: categories.name,
+			registrationCount: sql`count(${registrations.id})`.mapWith(Number),
+		})
+		.from(activities)
+		.leftJoin(categories, eq(activities.categoryId, categories.id))
+		.leftJoin(registrations, eq(registrations.activityId, activities.id))
+		.groupBy(activities.categoryId, categories.name);
 }

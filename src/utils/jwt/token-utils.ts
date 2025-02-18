@@ -1,11 +1,11 @@
 // src/utils/token-utils.ts
 
-import { SignJWT, jwtVerify, JWTPayload } from 'jose';
+import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 import { JWT_SECRET_KEY } from '@/constants/jwt.config';
 
 export interface UserPayload extends JWTPayload {
   id: string;
-  username: string;
+  name: string;
 }
 
 export async function createToken(payload: UserPayload): Promise<string> {
@@ -34,7 +34,7 @@ export async function verifyToken(token: string): Promise<UserPayload> {
 
   return {
     id: payload.id,
-    username: payload.username,
+    name: payload.username,
     email: payload.email,
     ...payload, // 包含其他可能的 JWTPayload 字段
   };
