@@ -1,13 +1,13 @@
-'use server'
+'use server';
 
 import {
-  createComment,
-  getComments,
-  getCommentById,
-  updateCommentStatus,
-  deleteComment,
-  CommentStatus,
-  CommentStatusType
+	createComment,
+	getComments,
+	getCommentById,
+	updateCommentStatus,
+	deleteComment,
+	CommentStatus,
+	type CommentStatusType,
 } from '@/models/comment.model';
 import type { NewComment } from '@/schema/comment.schema';
 
@@ -16,7 +16,7 @@ import type { NewComment } from '@/schema/comment.schema';
  * @param data - 评论数据
  */
 export async function create(data: NewComment) {
-  return createComment(data);
+	return createComment(data);
 }
 
 /**
@@ -24,15 +24,18 @@ export async function create(data: NewComment) {
  * @param filters - 过滤条件
  * @param pagination - 分页参数
  */
-export async function list(filters: { status?: number; userId?: number } = {}, pagination = {}) {
-  const { status, ...otherFilters } = filters;
-  return getComments(
-    { 
-      ...(status !== undefined ? { status: status as CommentStatusType } : {}),
-      ...otherFilters 
-    },
-    pagination
-  );
+export async function list(
+	filters: { status?: number; userId?: number } = {},
+	pagination = {},
+) {
+	const { status, ...otherFilters } = filters;
+	return getComments(
+		{
+			...(status !== undefined ? { status: status as CommentStatusType } : {}),
+			...otherFilters,
+		},
+		pagination,
+	);
 }
 
 /**
@@ -40,7 +43,7 @@ export async function list(filters: { status?: number; userId?: number } = {}, p
  * @param id - 评论ID
  */
 export async function getById(id: number) {
-  return getCommentById(id);
+	return getCommentById(id);
 }
 
 /**
@@ -49,7 +52,7 @@ export async function getById(id: number) {
  * @param status - 新状态
  */
 export async function updateStatus(id: number, status: number) {
-  return updateCommentStatus(id, status as CommentStatusType);
+	return updateCommentStatus(id, status as CommentStatusType);
 }
 
 /**
@@ -57,7 +60,7 @@ export async function updateStatus(id: number, status: number) {
  * @param id - 评论ID
  */
 export async function remove(id: number) {
-  return deleteComment(id);
+	return deleteComment(id);
 }
 
 /**
@@ -66,7 +69,7 @@ export async function remove(id: number) {
  * @param pagination - 分页参数
  */
 export async function getUserComments(userId: number, pagination = {}) {
-  return getComments({ userId }, pagination);
+	return getComments({ userId }, pagination);
 }
 
 /**
@@ -74,5 +77,5 @@ export async function getUserComments(userId: number, pagination = {}) {
  * @param pagination - 分页参数
  */
 export async function getPendingComments(pagination = {}) {
-  return getComments({ status: CommentStatus.PENDING }, pagination);
-} 
+	return getComments({ status: CommentStatus.PENDING }, pagination);
+}

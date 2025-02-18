@@ -64,7 +64,7 @@ export default function AdminLayout({
   const pathname = usePathname();
 
   return (
-    <div className='min-h-screen bg-background'>
+    <div className='min-h-screen bg-background w-full'>
       <header className='border-b' />
       <div className='flex'>
         <aside className='w-64 min-h-[calc(100vh-73px)] bg-zinc-900 text-zinc-400'>
@@ -79,9 +79,8 @@ export default function AdminLayout({
                   {group.children.map((item) => (
                     <Link key={item.path}
                       href={item.path}>
-                      <div className={`px-3 py-2 text-base rounded-md transition-colors hover:bg-zinc-800 hover:text-zinc-200 ${
-                        pathname === item.path ? 'bg-zinc-800 text-zinc-200' : ''
-                      }`}>
+                      <div className={`px-3 py-2 text-base rounded-md transition-colors hover:bg-zinc-800 hover:text-zinc-200 ${pathname === item.path ? 'bg-zinc-800 text-zinc-200' : ''
+                        }`}>
                         {item.title}
                       </div>
                     </Link>

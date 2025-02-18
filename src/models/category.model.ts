@@ -2,6 +2,7 @@ import db from '@/database/neon.db';
 import { and, eq, sql } from 'drizzle-orm';
 import { categories } from '@/schema/category.schema';
 import { activities } from '@/schema/activity.schema';
+import { registrations } from '@/schema/registration.schema';
 
 // ====================
 //  1. 获取分类列表
@@ -258,4 +259,39 @@ export async function getCategoryStats(categoryId: number) {
     statusStats,
     recentActivities
   };
+}
+
+// ====================
+//  7. 获取各分类活动数量统计
+// ====================
+export async function getCategoryActivityCount() {
+  const stats = await db
+    .select({
+      categoryId: activities.categoryId,
+      categoryName: categories.name,
+      count: sql`count(*)`.mapWith(Number)
+    })
+    .from(activities)
+    .leftJoin(categories, eq(activities.categoryId, categories.id))
+    .groupBy(activities.categoryId, categories.name);
+
+  return stats;
+}
+
+// ====================
+//  8. 获取各分类报名人数统计
+// ====================
+export async function getCategoryRegistrationCount() {
+  const stats = await db
+    .select({
+      categoryId: activities.categoryId,
+      categoryName: categories.name,
+      registrationCount: sql`count(${registrations.id})`.mapWith(Number)
+    })
+    .from(activities)
+    .leftJoin(categories, eq(activities.categoryId, categories.id))
+    .leftJoin(registrations, eq(registrations.activityId, activities.id))
+    .groupBy(activities.categoryId, categories.name);
+
+  return stats;
 }

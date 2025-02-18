@@ -1,41 +1,20 @@
-/* eslint-disable @typescript-eslint/no-shadow */
+'use server';
+
 import {
-  ActivityStatus,
-  type ActivityStatusType,
-  createActivity as modelCreateActivity,
-  updateActivity as modelUpdateActivity,
-  deleteActivity as modelDeleteActivity,
-  getActivity as modelGetActivity,
-  listActivities as modelListActivities,
-  updateActivityStatus as modelUpdateActivityStatus,
-  publishActivity as modelPublishActivity,
-  unpublishActivity as modelUnpublishActivity,
-  getActivitiesByOrganizer as modelGetActivitiesByOrganizer
+	createActivity as modelCreateActivity,
+	updateActivity as modelUpdateActivity,
+	deleteActivity as modelDeleteActivity,
+	getActivity as modelGetActivity,
+	listActivities as modelListActivities,
+	updateActivityStatus as modelUpdateActivityStatus,
+	publishActivity as modelPublishActivity,
+	unpublishActivity as modelUnpublishActivity,
+	getActivitiesByOrganizer as modelGetActivitiesByOrganizer,
 } from '@/models/activity.model';
 
-import { activities } from '@/schema/activity.schema';
 import { createNotification } from '@/models/notification.model';
+import { ActivityStatus, type ActivityStatusType, type GetActivitiesOptions, type Activity } from '@/types/activity.types';
 import { getActivityRegistrationCount } from './registration.service';
-
-// 导出活动状态常量
-export { ActivityStatus, type ActivityStatusType };
-
-// 使用drizzle的类型推导
-type Activity = typeof activities.$inferSelect;
-
-// 活动查询选项接口
-interface GetActivitiesOptions {
-  status?: ActivityStatusType;
-  categoryId?: number;
-  startTime?: Date;
-  endTime?: Date;
-  page?: number;
-  pageSize?: number;
-  orderBy?: 'startTime' | 'createdAt';
-  order?: 'asc' | 'desc';
-}
-
-// 服务层方法实现
 
 /**
  * 创建新活动
@@ -50,16 +29,19 @@ interface GetActivitiesOptions {
  *   - categoryId: 活动类别ID
  * @returns 返回创建的活动信息
  */
-export async function createActivity(organizerId: number, activityData: {
-  title: string;
-  description: string;
-  startTime: Date;
-  endTime: Date;
-  location: string;
-  capacity: number;
-  categoryId: number;
-}) {
-  return modelCreateActivity(organizerId, activityData);
+export async function createActivity(
+	organizerId: number,
+	activityData: {
+		title: string;
+		description: string;
+		startTime: Date;
+		endTime: Date;
+		location: string;
+		capacity: number;
+		categoryId: number;
+	},
+) {
+	return modelCreateActivity(organizerId, activityData);
 }
 
 /**
@@ -77,19 +59,19 @@ export async function createActivity(organizerId: number, activityData: {
  * @returns 返回更新后的活动信息
  */
 export async function updateActivity(
-  activityId: number,
-  organizerId: number,
-  activityData: {
-    title?: string;
-    description?: string;
-    startTime?: Date;
-    endTime?: Date;
-    location?: string;
-    capacity?: number;
-    categoryId?: number;
-  }
+	activityId: number,
+	organizerId: number,
+	activityData: {
+		title?: string;
+		description?: string;
+		startTime?: Date;
+		endTime?: Date;
+		location?: string;
+		capacity?: number;
+		categoryId?: number;
+	},
 ) {
-  return modelUpdateActivity(activityId, organizerId, activityData);
+	return modelUpdateActivity(activityId, organizerId, activityData);
 }
 
 /**
@@ -99,7 +81,7 @@ export async function updateActivity(
  * @returns 返回删除操作的结果
  */
 export async function deleteActivity(activityId: number, organizerId: number) {
-  return modelDeleteActivity(activityId, organizerId);
+	return modelDeleteActivity(activityId, organizerId);
 }
 
 /**
@@ -108,7 +90,7 @@ export async function deleteActivity(activityId: number, organizerId: number) {
  * @returns 返回活动的详细信息
  */
 export async function getActivity(activityId: number) {
-  return modelGetActivity(activityId);
+	return modelGetActivity(activityId);
 }
 
 /**
@@ -125,29 +107,31 @@ export async function getActivity(activityId: number) {
  * @returns 返回活动列表和分页信息
  */
 export async function listActivities(filters: {
-  status?: ActivityStatusType;
-  categoryId?: number;
-  startTime?: Date;
-  endTime?: Date;
-  page?: number;
-  pageSize?: number;
-  orderBy?: 'startTime' | 'createdAt';
-  order?: 'asc' | 'desc';
+	status?: ActivityStatusType;
+	categoryId?: number;
+	startTime?: Date;
+	endTime?: Date;
+	page?: number;
+	pageSize?: number;
+	orderBy?: 'startTime' | 'createdAt';
+	order?: 'asc' | 'desc';
 }) {
-  const result = await modelListActivities(filters);
+	const result = await modelListActivities(filters);
 
-  // 获取每个活动的报名人数
-  const activitiesWithRegistrations = await Promise.all(
-    result.activities.map(async (activity: typeof result.activities[number]) => ({
-      ...activity,
-      currentRegistrations: await getActivityRegistrationCount(activity.id)
-    }))
-  );
+	// 获取每个活动的报名人数
+	const activitiesWithRegistrations = await Promise.all(
+		result.activities.map(
+			async (activity: (typeof result.activities)[number]) => ({
+				...activity,
+				currentRegistrations: await getActivityRegistrationCount(activity.id),
+			}),
+		),
+	);
 
-  return {
-    activities: activitiesWithRegistrations,
-    pagination: result.pagination
-  };
+	return {
+		activities: activitiesWithRegistrations,
+		pagination: result.pagination,
+	};
 }
 
 /**
@@ -158,11 +142,11 @@ export async function listActivities(filters: {
  * @returns 返回更新后的活动状态信息
  */
 export async function updateActivityStatus(
-  activityId: number,
-  organizerId: number,
-  newStatus: ActivityStatusType
+	activityId: number,
+	organizerId: number,
+	newStatus: ActivityStatusType,
 ) {
-  return modelUpdateActivityStatus(activityId, organizerId, newStatus);
+	return modelUpdateActivityStatus(activityId, organizerId, newStatus);
 }
 
 /**
@@ -172,7 +156,7 @@ export async function updateActivityStatus(
  * @returns 返回发布后的活动信息
  */
 export async function publishActivity(activityId: number, organizerId: number) {
-  return modelPublishActivity(activityId, organizerId);
+	return modelPublishActivity(activityId, organizerId);
 }
 
 /**
@@ -181,8 +165,11 @@ export async function publishActivity(activityId: number, organizerId: number) {
  * @param organizerId 组织者ID
  * @returns 返回取消发布后的活动信息
  */
-export async function unpublishActivity(activityId: number, organizerId: number) {
-  return modelUnpublishActivity(activityId, organizerId);
+export async function unpublishActivity(
+	activityId: number,
+	organizerId: number,
+) {
+	return modelUnpublishActivity(activityId, organizerId);
 }
 
 /**
@@ -191,7 +178,7 @@ export async function unpublishActivity(activityId: number, organizerId: number)
  * @returns 返回该组织者的所有活动列表
  */
 export async function getActivitiesByOrganizer(organizerId: number) {
-  return modelGetActivitiesByOrganizer(organizerId);
+	return modelGetActivitiesByOrganizer(organizerId);
 }
 
 /**
@@ -200,19 +187,19 @@ export async function getActivitiesByOrganizer(organizerId: number) {
  * @returns 返回活动容量信息
  */
 export async function checkActivityCapacity(activityId: number) {
-  const activity = await modelGetActivity(activityId);
-  if (!activity) {
-    throw new Error('活动不存在');
-  }
-  
-  // 获取已注册人数
-  const registeredCount = await getActivityRegistrationCount(activityId);
-  
-  return {
-    capacity: activity.capacity,
-    registered: registeredCount,
-    available: activity.capacity - registeredCount
-  };
+	const activity = await modelGetActivity(activityId);
+	if (!activity) {
+		throw new Error('活动不存在');
+	}
+
+	// 获取已注册人数
+	const registeredCount = await getActivityRegistrationCount(activityId);
+
+	return {
+		capacity: activity.capacity,
+		registered: registeredCount,
+		available: activity.capacity - registeredCount,
+	};
 }
 
 /**
@@ -223,17 +210,17 @@ export async function checkActivityCapacity(activityId: number) {
  * @returns 返回更新后的活动信息
  */
 export async function updateActivityCapacity(
-  activityId: number,
-  organizerId: number,
-  newCapacity: number
+	activityId: number,
+	organizerId: number,
+	newCapacity: number,
 ) {
-  if (newCapacity < 0) {
-    throw new Error('活动容量不能小于0');
-  }
-  
-  return modelUpdateActivity(activityId, organizerId, {
-    capacity: newCapacity
-  });
+	if (newCapacity < 0) {
+		throw new Error('活动容量不能小于0');
+	}
+
+	return modelUpdateActivity(activityId, organizerId, {
+		capacity: newCapacity,
+	});
 }
 
 /**
@@ -245,29 +232,33 @@ export async function updateActivityCapacity(
  * @returns 返回更新后的活动信息
  */
 export async function reviewActivity(
-  activityId: number,
-  approved: boolean,
-  reviewerId: number,
-  reason?: string
+	activityId: number,
+	approved: boolean,
+	reviewerId: number,
+	reason?: string,
 ) {
-  const activity = await getActivity(activityId);
-  
-  if (!activity) {
-    throw new Error('活动不存在');
-  }
+	const activity = await getActivity(activityId);
 
-  // 更新活动状态
-  const newStatus = approved ? ActivityStatus.PUBLISHED : ActivityStatus.DRAFT;
-  const updatedActivity = await modelUpdateActivityStatus(activityId, reviewerId, newStatus);
-  
-  // 发送通知给活动组织者
-  await createNotification(
-    activity.organizerId,
-    activityId,
-    `您的活动「${activity.title}」${approved ? '已通过审核' : '审核未通过'}${reason ? `，原因：${reason}` : ''}`
-  );
-  
-  return updatedActivity;
+	if (!activity) {
+		throw new Error('活动不存在');
+	}
+
+	// 更新活动状态
+	const newStatus = approved ? ActivityStatus.PUBLISHED : ActivityStatus.DRAFT;
+	const updatedActivity = await modelUpdateActivityStatus(
+		activityId,
+		reviewerId,
+		newStatus,
+	);
+
+	// 发送通知给活动组织者
+	await createNotification(
+		activity.organizerId,
+		activityId,
+		`您的活动「${activity.title}」${approved ? '已通过审核' : '审核未通过'}${reason ? `，原因：${reason}` : ''}`,
+	);
+
+	return updatedActivity;
 }
 
 /**
@@ -279,35 +270,35 @@ export async function reviewActivity(
  * @returns 返回冲突的活动列表
  */
 export async function checkActivityTimeConflict(
-  organizerId: number,
-  startTime: Date,
-  endTime: Date,
-  excludeActivityId?: number
+	organizerId: number,
+	startTime: Date,
+	endTime: Date,
+	excludeActivityId?: number,
 ) {
-  // 获取该组织者的所有活动
-  const activities = await modelGetActivitiesByOrganizer(organizerId);
+	// 获取该组织者的所有活动
+	const activities = await modelGetActivitiesByOrganizer(organizerId);
 
-  // 过滤出已发布的活动，并检查时间冲突
-  const conflicts = activities.filter(activity => {
-    if (
-      activity.status !== ActivityStatus.PUBLISHED ||
-      (excludeActivityId && activity.id === excludeActivityId)
-    ) {
-      return false;
-    }
+	// 过滤出已发布的活动，并检查时间冲突
+	const conflicts = activities.filter((activity) => {
+		if (
+			activity.status !== ActivityStatus.PUBLISHED ||
+			(excludeActivityId && activity.id === excludeActivityId)
+		) {
+			return false;
+		}
 
-    const activityStart = new Date(activity.startTime);
-    const activityEnd = new Date(activity.endTime);
+		const activityStart = new Date(activity.startTime);
+		const activityEnd = new Date(activity.endTime);
 
-    // 检查是否有时间重叠
-    return (
-      (startTime >= activityStart && startTime < activityEnd) ||
-      (endTime > activityStart && endTime <= activityEnd) ||
-      (startTime <= activityStart && endTime >= activityEnd)
-    );
-  });
+		// 检查是否有时间重叠
+		return (
+			(startTime >= activityStart && startTime < activityEnd) ||
+			(endTime > activityStart && endTime <= activityEnd) ||
+			(startTime <= activityStart && endTime >= activityEnd)
+		);
+	});
 
-  return conflicts;
+	return conflicts;
 }
 
 /**
@@ -315,18 +306,18 @@ export async function checkActivityTimeConflict(
  * @param options 查询选项
  */
 export async function getActivities(options: GetActivitiesOptions = {}) {
-  const { activities, pagination } = await modelListActivities(options);
+	const { activities, pagination } = await modelListActivities(options);
 
-  // 获取每个活动的报名人数
-  const activitiesWithRegistrations = await Promise.all(
-    activities.map(async (activity: typeof activities[number]) => ({
-      ...activity,
-      currentRegistrations: await getActivityRegistrationCount(activity.id)
-    }))
-  );
+	// 获取每个活动的报名人数
+	const activitiesWithRegistrations = await Promise.all(
+		activities.map(async (activity: (typeof activities)[number]) => ({
+			...activity,
+			currentRegistrations: await getActivityRegistrationCount(activity.id),
+		})),
+	);
 
-  return {
-    activities: activitiesWithRegistrations,
-    pagination
-  };
+	return {
+		activities: activitiesWithRegistrations,
+		pagination,
+	};
 }

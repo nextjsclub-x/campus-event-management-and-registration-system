@@ -1,7 +1,7 @@
-import { NextRequest } from 'next/server';
-import { 
+import type { NextRequest } from 'next/server';
+import {
   getActivityFeedbacks,
-  getActivityRatingStats 
+  getActivityRatingStats
 } from '@/service/feedback.service';
 import { getActivity } from '@/service/activity.service';
 

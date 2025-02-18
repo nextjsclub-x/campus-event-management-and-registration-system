@@ -6,10 +6,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserRole } from '@/schema/user.schema';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import type { UserRole } from '@/schema/user.schema';
 import Link from 'next/link';
 import { post } from '@/utils/request/request';
 
@@ -40,15 +53,14 @@ export default function RegisterPage() {
         password,
         name,
         role,
-        studentId: role === 'student' ? studentId : undefined
+        studentId: role === 'student' ? studentId : undefined,
       });
-      
+
       toast({
         title: '注册成功',
         description: '正在跳转到登录页面...',
       });
       router.push('/login');
-      
     } catch (error: any) {
       // 处理特定错误
       if (error.code === 409) {
@@ -126,7 +138,7 @@ export default function RegisterPage() {
             </div>
             <div className='space-y-2'>
               <Label htmlFor='role'>角色</Label>
-              <Select 
+              <Select
                 value={role}
                 onValueChange={(value: UserRole) => setRole(value)}
               >
@@ -152,7 +164,9 @@ export default function RegisterPage() {
                   className={errors.studentId ? 'border-red-500' : ''}
                 />
                 {errors.studentId && (
-                  <p className='text-sm text-red-500 mt-1'>{errors.studentId}</p>
+                  <p className='text-sm text-red-500 mt-1'>
+                    {errors.studentId}
+                  </p>
                 )}
               </div>
             )}
@@ -173,20 +187,16 @@ export default function RegisterPage() {
             </div>
           </CardContent>
           <CardFooter className='flex flex-col space-y-4'>
-            <Button
-              type='submit'
+            <Button type='submit'
               className='w-full'
-              disabled={loading}
-            >
+              disabled={loading}>
               {loading ? '注册中...' : '注册'}
             </Button>
             <Link href='/login'
               className='w-full'>
-              <Button
-                type='button'
+              <Button type='button'
                 variant='outline'
-                className='w-full'
-              >
+                className='w-full'>
                 已有账号？立即登录
               </Button>
             </Link>

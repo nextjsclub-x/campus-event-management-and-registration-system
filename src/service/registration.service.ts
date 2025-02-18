@@ -1,3 +1,5 @@
+'use server';
+
 /**
  * 报名服务
  * 处理活动报名相关的业务逻辑
@@ -11,11 +13,9 @@ import {
 } from '@/models/registration.model';
 
 import { createNotification } from '@/models/notification.model';
-import { getActivity, ActivityStatus } from '@/models/activity.model';
-import { RegistrationStatus } from '@/schema/registration.schema';
-
-// 导出报名状态常量
-export { RegistrationStatus };
+import { getActivity } from '@/models/activity.model';
+import { ActivityStatus } from '@/types/activity.types';
+import { RegistrationStatus } from '@/types/registration.types';
 
 // 创建报名
 export async function createRegistration(userId: number, activityId: number) {
@@ -168,7 +168,7 @@ export async function checkUserRegistration(userId: number, activityId: number) 
   const { registrations } = await getUserRegistrations(userId, {
     page: 1,
     pageSize: 1,
-    status: RegistrationStatus.CONFIRMED // 只检查已确认的报名
+    status: RegistrationStatus.APPROVED // 只检查已批准的报名
   });
 
   // 从结果中筛选指定活动的报名
@@ -179,11 +179,11 @@ export async function checkUserRegistration(userId: number, activityId: number) 
 /**
  * 获取活动的报名人数
  * @param activityId 活动ID
- * @returns 返回有效报名人数（已确认的）
+ * @returns 返回有效报名人数（已批准的）
  */
 export async function getActivityRegistrationCount(activityId: number) {
   const { registrations } = await getActivityRegistrations(activityId, {
-    status: RegistrationStatus.CONFIRMED // 只计算已确认的报名
+    status: RegistrationStatus.APPROVED // 只计算已批准的报名
   });
 
   return registrations.length;

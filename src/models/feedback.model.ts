@@ -4,6 +4,7 @@ import { activities } from '@/schema/activity.schema';
 import { users } from '@/schema/user.schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
+// 内部使用的类型，不导出
 type Feedback = typeof feedback.$inferSelect;
 type NewFeedback = typeof feedback.$inferInsert;
 

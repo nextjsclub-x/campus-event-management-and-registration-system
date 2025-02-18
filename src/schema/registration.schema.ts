@@ -4,10 +4,13 @@ import { activities } from './activity.schema';
 
 // 报名状态枚举
 export enum RegistrationStatus {
-  PENDING = 0,    // 待审核
-  CONFIRMED = 1,  // 已确认
-  CANCELLED = 2,  // 已取消
-  REJECTED = 3,   // 已拒绝
+  CANCELLED = 0,    // 已取消
+  PENDING = 1,      // 待审核（默认状态）
+  APPROVED = 2,     // 已批准
+  REJECTED = 3,     // 已拒绝
+  WAITLIST = 4,     // 候补名单
+  ATTENDED = 5,     // 已参加
+  ABSENT = 6        // 未出席
 }
 
 // Registrations table

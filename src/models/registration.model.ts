@@ -1,23 +1,24 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable default-case */
-import db from '@/database/neon.db';
 import { and, eq, sql, desc, asc } from 'drizzle-orm';
-import { registrations } from '@/schema/registration.schema';
+import { registrations, RegistrationStatus } from '@/schema/registration.schema';
 import { activities } from '@/schema/activity.schema';
 import { users } from '@/schema/user.schema';
+import db from '@/database/neon.db';
 
-// 报名状态常量
-export const RegistrationStatus = {
-  CANCELLED: 0,    // 已取消
-  PENDING: 1,      // 待审核（默认状态）
-  APPROVED: 2,     // 已批准
-  REJECTED: 3,     // 已拒绝
-  WAITLIST: 4,     // 候补名单
-  ATTENDED: 5,     // 已参加
-  ABSENT: 6        // 未出席
-} as const;
+// 活动状态枚举
+export enum ActivityStatus {
+  DRAFT = 0,      // 草稿
+  PUBLISHED = 1,  // 已发布
+  CANCELLED = 2,  // 已取消
+  DELETED = 3,    // 已删除
+}
 
-type RegistrationStatusType = typeof RegistrationStatus[keyof typeof RegistrationStatus];
+// 导出报名状态枚举
+export { RegistrationStatus };
+
+// 定义报名状态类型
+type RegistrationStatusType = RegistrationStatus;
 
 // ====================
 //  1. 创建报名
@@ -985,4 +986,117 @@ export async function updateRegistrationStatus(registrationId: number, newStatus
     .returning();
 
   return updatedRegistration;
+}
+
+/**
+ * 获取报名状态统计
+ */
+export async function getRegistrationStatusCount(): Promise<Array<{
+  status: number;
+  count: number;
+}>> {
+  const result = await db
+    .select({
+      status: registrations.status,
+      count: sql<number>`count(*)`,
+    })
+    .from(registrations)
+    .groupBy(registrations.status);
+
+  return result;
+}
+
+/**
+ * 获取最近一周报名趋势
+ */
+export async function getRecentRegistrationCount(): Promise<Array<{
+  date: string;
+  count: number;
+}>> {
+  const result = await db
+    .select({
+      date: sql<string>`DATE(${activities.startTime})`,
+      count: sql<number>`count(${registrations.id})`,
+    })
+    .from(registrations)
+    .leftJoin(activities, sql`${activities.id} = ${registrations.activityId}`)
+    .where(sql`${activities.startTime} >= NOW() - INTERVAL '7 days'`)
+    .groupBy(sql`DATE(${activities.startTime})`)
+    .orderBy(sql`DATE(${activities.startTime})`);
+
+  return result;
+}
+
+/**
+ * 获取报名统计分析数据
+ */
+export async function getRegistrationStats(): Promise<{
+  totalRegistrations: number;
+  newRegistrationsThisMonth: number;
+  totalActivities: number;
+  newActivitiesThisMonth: number;
+  statusCount: Array<{
+    status: number;
+    count: number;
+  }>;
+}> {
+  // 获取总报名人次
+  const [{ totalRegistrations }] = await db
+    .select({
+      totalRegistrations: sql<number>`count(*)`,
+    })
+    .from(registrations)
+    .where(sql`${registrations.status} = ${RegistrationStatus.APPROVED}`);
+
+  // 获取本月新增报名人次
+  const [{ newRegistrationsThisMonth }] = await db
+    .select({
+      newRegistrationsThisMonth: sql<number>`count(*)`,
+    })
+    .from(registrations)
+    .leftJoin(activities, sql`${activities.id} = ${registrations.activityId}`)
+    .where(
+      and(
+        sql`${registrations.status} = ${RegistrationStatus.APPROVED}`,
+        sql`${activities.startTime} >= DATE_TRUNC('month', CURRENT_DATE)`
+      )
+    );
+
+  // 获取活动总数
+  const [{ totalActivities }] = await db
+    .select({
+      totalActivities: sql<number>`count(*)`,
+    })
+    .from(activities)
+    .where(sql`${activities.status} != ${ActivityStatus.DELETED}`);
+
+  // 获取本月新增活动数
+  const [{ newActivitiesThisMonth }] = await db
+    .select({
+      newActivitiesThisMonth: sql<number>`count(*)`,
+    })
+    .from(activities)
+    .where(
+      and(
+        sql`${activities.status} != ${ActivityStatus.DELETED}`,
+        sql`${activities.startTime} >= DATE_TRUNC('month', CURRENT_DATE)`
+      )
+    );
+
+  // 获取各状态报名数量
+  const statusCount = await db
+    .select({
+      status: registrations.status,
+      count: sql<number>`count(*)`,
+    })
+    .from(registrations)
+    .groupBy(registrations.status);
+
+  return {
+    totalRegistrations,
+    newRegistrationsThisMonth,
+    totalActivities,
+    newActivitiesThisMonth,
+    statusCount,
+  };
 }

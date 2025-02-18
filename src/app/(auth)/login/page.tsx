@@ -29,7 +29,7 @@ export default function LoginPage() {
         email,
         password
       });
-      
+
       // 登录成功，更新状态
       useUserStore.getState().setUserInfo({
         token: result.data.token,
@@ -43,11 +43,11 @@ export default function LoginPage() {
         description: '正在跳转到首页...',
       });
       router.push('/');
-      
+
     } catch (error: any) {
       // 从API响应中提取错误信息
       const errorMessage = error.response?.data?.message || '登录失败，请稍后重试';
-      
+
       toast({
         variant: 'destructive',
         title: '登录失败',
