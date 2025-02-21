@@ -1,62 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { get } from '@/utils/request/request';
-import { formatDate } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Bell } from 'lucide-react';
-
-interface Notification {
-  id: number;
-  message: string;
-  isRead: boolean;
-  createdAt: string;
-  activity?: {
-    id: number;
-    title: string;
-  };
-}
+import { Button } from '@/components/ui/button';
+import { formatDate } from '@/lib/utils';
+import { useNotificationList, useMarkNotificationAsRead } from '@/hooks/use-notification';
+import type { Notification } from '@/schema/notification.schema';
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: response, isLoading } = useNotificationList();
+  const { mutate: markAsRead } = useMarkNotificationAsRead();
 
-  const fetchNotifications = async () => {
-    try {
-      const response = await get('/api/notifications');
-      if (response.code === 200) {
-        setNotifications(response.data.notifications);
-      }
-    } catch (error) {
-      console.error('获取通知失败:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const notifications = response?.data?.items || [];
 
-  const markAsRead = async (id: number) => {
-    try {
-      await get(`/api/notifications/${id}/read`);
-      // 更新本地状态
-      setNotifications(notifications.map(notification =>
-        notification.id === id
-          ? { ...notification, isRead: true }
-          : notification
-      ));
-    } catch (error) {
-      console.error('标记已读失败:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return <div className='flex justify-center items-center min-h-[400px]'>加载中...</div>;
   }
-
-
 
   return (
     <div className='container mx-auto py-8'>
@@ -71,11 +29,10 @@ export default function NotificationsPage() {
             暂无通知
           </div>
         ) : (
-          notifications.map((notification) => (
+          notifications.map((notification: Notification) => (
             <div
               key={notification.id}
-              className={`p-4 rounded-lg border ${notification.isRead ? 'bg-muted' : 'bg-white'
-                }`}
+              className={`p-4 rounded-lg border ${notification.isRead ? 'bg-muted' : 'bg-white'}`}
             >
               <div className='flex justify-between items-start'>
                 <div className='flex-1'>
@@ -83,9 +40,9 @@ export default function NotificationsPage() {
                     {formatDate(notification.createdAt)}
                   </p>
                   <p className='mb-2'>{notification.message}</p>
-                  {notification.activity && (
+                  {notification.activityId && (
                     <p className='text-sm text-muted-foreground'>
-                      相关活动：{notification.activity.title}
+                      相关活动ID：{notification.activityId}
                     </p>
                   )}
                 </div>

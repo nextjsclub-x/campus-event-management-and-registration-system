@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { post, get } from '@/utils/request/request';
 import { useToast } from '@/hooks/use-toast';
 import { useUserStore } from '@/store/user';
 import {
@@ -17,128 +16,159 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useCategoryList } from '@/hooks/use-category';
+import { useCreateActivity } from '@/hooks/use-activity';
+import type { Category } from '@/types/category.types';
+import { APIStatusCode } from '@/types/api-response.types';
 
-// 定义表单数据的接口
-interface ActivityFormData {
-  title: string;
-  description: string;
-  startTime: string;
-  endTime: string;
-  location: string;
-  
-  capacity: string;
-  categoryId: string;
-}
-
-// 添加分类接口
-interface Category {
-  id: number;
-  name: string;
-  description: string;
-}
-
-const CreateActivityPage = () => {
+export default function CreateActivityPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { token, userId } = useUserStore();
-  
-  // 创建默认的开始时间（当前时间）和结束时间（24小时后）
+  const id = useUserStore((state) => state.id);
+  const { mutateAsync: createActivity } = useCreateActivity();
+  const { data: categoryResponse } = useCategoryList();
+
   const now = new Date();
   const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-  
-  // 格式化时间为 datetime-local 输入框所需的格式 (YYYY-MM-DDThh:mm)
   const formatDateForInput = (date: Date) => date.toISOString().slice(0, 16);
 
-  const [submitting, setSubmitting] = useState<boolean>(false);
-  const [formData, setFormData] = useState<ActivityFormData>({
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{
+    title?: string;
+    description?: string;
+    startTime?: string;
+    endTime?: string;
+    location?: string;
+    capacity?: string;
+    categoryId?: string;
+  }>({});
+
+  const [formData, setFormData] = useState({
     title: '',
     description: '',
-    startTime: formatDateForInput(now),      // 设置默认开始时间
-    endTime: formatDateForInput(tomorrow),    // 设置默认结束时间
+    startTime: formatDateForInput(now),
+    endTime: formatDateForInput(tomorrow),
     location: '',
-    capacity: '10',                          // 设置默认活动容量为10
-    categoryId: ''
+    capacity: '10',
+    categoryId: '',
   });
 
-  const [categories, setCategories] = useState<Category[]>([]);
+  // 从 API 响应中获取分类列表
+  const categories = Array.isArray(categoryResponse?.data) ? categoryResponse.data : [];
 
-  // 获取分类列表
+  // 当分类列表加载完成且没有选择分类时，自动选择第一个分类
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await get('/api/category');
-        if (response.code === 200 && response.data.categories) {
-          setCategories(response.data.categories);
-          // 如果有分类数据，设置第一个分类为默认值
-          if (response.data.categories.length > 0) {
-            setFormData(prev => ({
-              ...prev,
-              categoryId: response.data.categories[0].id.toString()
-            }));
-          }
-        }
-      } catch (error) {
-        console.error('获取分类列表失败:', error);
-        toast({
-          variant: 'destructive',
-          title: '获取分类列表失败',
-          description: '请刷新页面重试'
-        });
+    if (categories.length > 0 && !formData.categoryId) {
+      setFormData(prev => ({
+        ...prev,
+        categoryId: categories[0].id.toString()
+      }));
+    }
+  }, [categories, formData.categoryId]);
+
+  // 验证单个字段
+  const validateField = (name: string, value: string) => {
+    switch (name) {
+      case 'title': {
+        return !value.trim() ? '请输入活动标题' : '';
       }
+      case 'description': {
+        return !value.trim() ? '请输入活动描述' : '';
+      }
+      case 'location': {
+        return !value.trim() ? '请输入活动地点' : '';
+      }
+      case 'capacity': {
+        if (!value) return '请输入活动容量';
+        const capacityNum = Number(value);
+        if (Number.isNaN(capacityNum) || capacityNum < 1) {
+          return '活动容量必须大于0';
+        }
+        return '';
+      }
+      case 'categoryId': {
+        return !value ? '请选择活动类别' : '';
+      }
+      case 'startTime': {
+        if (!value) return '请选择开始时间';
+        const startDate = new Date(value);
+        const currentTime = new Date();
+        return startDate < currentTime ? '开始时间不能早于当前时间' : '';
+      }
+      case 'endTime': {
+        if (!value) return '请选择结束时间';
+        const endDate = new Date(value);
+        const startDate = new Date(formData.startTime);
+        return endDate <= startDate ? '结束时间必须晚于开始时间' : '';
+      }
+      default:
+        return '';
+    }
+  };
+
+  // 处理字段变化
+  const handleFieldChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
+  };
+
+  // 验证所有字段
+  const validateForm = () => {
+    const newErrors = {
+      title: validateField('title', formData.title),
+      description: validateField('description', formData.description),
+      startTime: validateField('startTime', formData.startTime),
+      endTime: validateField('endTime', formData.endTime),
+      location: validateField('location', formData.location),
+      capacity: validateField('capacity', formData.capacity),
+      categoryId: validateField('categoryId', formData.categoryId),
     };
 
-    fetchCategories();
-  }, []);
+    setErrors(newErrors);
+    return !Object.values(newErrors).some(error => error);
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitting(true);
 
-    try {
-      if (!userId) {
-        throw new Error('请先登录');
-      }
+    if (!validateForm()) {
+      const errorMessages = Object.entries(errors)
+        .filter(([_, value]) => value)
+        .map(([key, value]) => `${value}`);
 
-      // 验证表单
-      if (!formData.title.trim() || !formData.description.trim() || 
-          !formData.startTime || !formData.endTime || 
-          !formData.location.trim() || !formData.capacity || 
-          !formData.categoryId) {
-        throw new Error('请填写所有必填项');
-      }
-
-      // 发送创建请求，添加类型
-      interface CreateActivityRequest {
-        organizerId: number;
-        title: string;
-        description: string;
-        startTime: string;
-        endTime: string;
-        location: string;
-        capacity: number;
-        categoryId: number;
-      }
-
-      const requestData: CreateActivityRequest = {
-        ...formData,
-        organizerId: userId,
-        capacity: parseInt(formData.capacity, 10),
-        categoryId: parseInt(formData.categoryId, 10)
-      };
-
-      await post('/api/activities/create', requestData);
-
-      toast({
-        title: '创建成功',
-        description: '活动已创建'
-      });
-
-      router.push('/');
-    } catch (error: any) {
       toast({
         variant: 'destructive',
+        title: '表单验证失败',
+        description: errorMessages.join('、'),
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await createActivity({
+        title: formData.title,
+        description: formData.description,
+        startTime: new Date(formData.startTime),
+        endTime: new Date(formData.endTime),
+        location: formData.location,
+        capacity: Number.parseInt(formData.capacity, 10),
+        categoryId: Number.parseInt(formData.categoryId, 10),
+      });
+
+      if (response.code === APIStatusCode.SUCCESS) {
+        toast({
+          title: '创建成功',
+          description: '活动已成功创建',
+        });
+        router.push('/admin/activities');
+      }
+    } catch (error) {
+      toast({
         title: '创建失败',
-        description: error.message || '请稍后重试'
+        description: error instanceof Error ? error.message : '未知错误',
+        variant: 'destructive',
       });
     } finally {
       setSubmitting(false);
@@ -149,9 +179,7 @@ const CreateActivityPage = () => {
     <div className='container mx-auto py-12'>
       <div className='mb-8'>
         <h2 className='text-3xl font-bold'>创建活动</h2>
-        <p className='text-muted-foreground mt-2'>
-          创建一个新的活动
-        </p>
+        <p className='text-muted-foreground mt-2'>创建一个新的活动</p>
       </div>
 
       <Card>
@@ -166,12 +194,13 @@ const CreateActivityPage = () => {
               <Input
                 id='title'
                 value={formData.title}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  title: e.target.value
-                }))}
+                onChange={(e) => handleFieldChange('title', e.target.value)}
                 placeholder='请输入活动标题'
+                className={errors.title ? 'border-red-500' : ''}
               />
+              {errors.title && (
+                <p className='text-sm text-red-500'>{errors.title}</p>
+              )}
             </div>
 
             <div className='space-y-2'>
@@ -179,13 +208,14 @@ const CreateActivityPage = () => {
               <Textarea
                 id='description'
                 value={formData.description}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  description: e.target.value
-                }))}
+                onChange={(e) => handleFieldChange('description', e.target.value)}
                 placeholder='请输入活动描述'
                 rows={6}
+                className={errors.description ? 'border-red-500' : ''}
               />
+              {errors.description && (
+                <p className='text-sm text-red-500'>{errors.description}</p>
+              )}
             </div>
 
             <div className='grid grid-cols-2 gap-4'>
@@ -195,11 +225,12 @@ const CreateActivityPage = () => {
                   id='startTime'
                   type='datetime-local'
                   value={formData.startTime}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    startTime: e.target.value
-                  }))}
+                  onChange={(e) => handleFieldChange('startTime', e.target.value)}
+                  className={errors.startTime ? 'border-red-500' : ''}
                 />
+                {errors.startTime && (
+                  <p className='text-sm text-red-500'>{errors.startTime}</p>
+                )}
               </div>
 
               <div className='space-y-2'>
@@ -208,11 +239,12 @@ const CreateActivityPage = () => {
                   id='endTime'
                   type='datetime-local'
                   value={formData.endTime}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    endTime: e.target.value
-                  }))}
+                  onChange={(e) => handleFieldChange('endTime', e.target.value)}
+                  className={errors.endTime ? 'border-red-500' : ''}
                 />
+                {errors.endTime && (
+                  <p className='text-sm text-red-500'>{errors.endTime}</p>
+                )}
               </div>
             </div>
 
@@ -221,12 +253,13 @@ const CreateActivityPage = () => {
               <Input
                 id='location'
                 value={formData.location}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  location: e.target.value
-                }))}
+                onChange={(e) => handleFieldChange('location', e.target.value)}
                 placeholder='请输入活动地点'
+                className={errors.location ? 'border-red-500' : ''}
               />
+              {errors.location && (
+                <p className='text-sm text-red-500'>{errors.location}</p>
+              )}
             </div>
 
             <div className='grid grid-cols-2 gap-4'>
@@ -237,28 +270,26 @@ const CreateActivityPage = () => {
                   type='number'
                   min='1'
                   value={formData.capacity}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    capacity: e.target.value
-                  }))}
+                  onChange={(e) => handleFieldChange('capacity', e.target.value)}
                   placeholder='请输入活动容量'
+                  className={errors.capacity ? 'border-red-500' : ''}
                 />
+                {errors.capacity && (
+                  <p className='text-sm text-red-500'>{errors.capacity}</p>
+                )}
               </div>
 
               <div className='space-y-2'>
                 <Label htmlFor='categoryId'>活动类别</Label>
                 <Select
                   value={formData.categoryId}
-                  onValueChange={(value) => setFormData(prev => ({
-                    ...prev,
-                    categoryId: value
-                  }))}
+                  onValueChange={(value) => handleFieldChange('categoryId', value)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={errors.categoryId ? 'border-red-500' : ''}>
                     <SelectValue placeholder='请选择活动类别' />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((category) => (
+                    {categories.map((category: Category) => (
                       <SelectItem
                         key={category.id}
                         value={category.id.toString()}
@@ -268,6 +299,9 @@ const CreateActivityPage = () => {
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.categoryId && (
+                  <p className='text-sm text-red-500'>{errors.categoryId}</p>
+                )}
               </div>
             </div>
 
@@ -280,10 +314,8 @@ const CreateActivityPage = () => {
               >
                 取消
               </Button>
-              <Button
-                type='submit'
-                disabled={submitting}
-              >
+              <Button type='submit'
+                disabled={submitting}>
                 {submitting ? '创建中...' : '创建活动'}
               </Button>
             </div>
@@ -292,6 +324,6 @@ const CreateActivityPage = () => {
       </Card>
     </div>
   );
-};
+}
 
-export default CreateActivityPage; 
+

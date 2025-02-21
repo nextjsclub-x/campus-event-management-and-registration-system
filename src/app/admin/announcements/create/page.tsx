@@ -2,55 +2,36 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { post } from '@/utils/request/request';
+import { useCreateAnnouncement } from '@/hooks/use-announcement';
+import type { CreateAnnouncementParams } from '@/types/announcement.types';
 
 export default function CreateAnnouncementPage() {
   const router = useRouter();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const { mutate: createAnnouncement, isPending } = useCreateAnnouncement();
+  const [formData, setFormData] = useState<CreateAnnouncementParams>({
     title: '',
     content: '',
-    isPublished: false
+    isPublished: 0
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
 
-    try {
-      if (!formData.title.trim() || !formData.content.trim()) {
-        throw new Error('标题和内容不能为空');
-      }
-
-      await post('/api/announcements', {
-        ...formData,
-        isPublished: formData.isPublished ? 1 : 0
-      });
-
-      toast({
-        title: '创建成功',
-        description: '公告已创建'
-      });
-
-      router.push('/admin/announcements');
-      router.refresh();
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: '创建失败',
-        description: error.message || '请稍后重试'
-      });
-    } finally {
-      setLoading(false);
+    if (!formData.title.trim() || !formData.content.trim()) {
+      return;
     }
+
+    createAnnouncement(formData, {
+      onSuccess: () => {
+        router.push('/admin/announcements');
+      }
+    });
   };
 
   return (
@@ -99,10 +80,10 @@ export default function CreateAnnouncementPage() {
             <div className='flex items-center space-x-2'>
               <Switch
                 id='isPublished'
-                checked={formData.isPublished}
+                checked={formData.isPublished === 1}
                 onCheckedChange={(checked) => setFormData(prev => ({
                   ...prev,
-                  isPublished: checked
+                  isPublished: checked ? 1 : 0
                 }))}
               />
               <Label htmlFor='isPublished'>立即发布</Label>
@@ -113,15 +94,15 @@ export default function CreateAnnouncementPage() {
                 type='button'
                 variant='outline'
                 onClick={() => router.back()}
-                disabled={loading}
+                disabled={isPending}
               >
                 取消
               </Button>
               <Button
                 type='submit'
-                disabled={loading}
+                disabled={isPending}
               >
-                {loading ? '创建中...' : '创建公告'}
+                {isPending ? '创建中...' : '创建公告'}
               </Button>
             </div>
           </form>
@@ -129,5 +110,5 @@ export default function CreateAnnouncementPage() {
       </Card>
     </div>
   );
-} 
+}
 

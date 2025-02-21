@@ -1,42 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { get } from '@/utils/request/request';
 import { Loader2 } from 'lucide-react';
-import type { Announcement } from '@/schema/announcement.schema';
-import type { APIResponse } from '@/schema/api-response.schema';
-import { useToast } from '@/hooks/use-toast';
+import { useAnnouncement } from '@/hooks/use-announcement';
 
 export default function AnnouncementDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const { data, isLoading } = useAnnouncement(Number(params.id));
 
-  useEffect(() => {
-    const fetchAnnouncement = async () => {
-      try {
-        const response = await get(`/api/announcements/${params.id}`);
-        const apiResponse = response as APIResponse<Announcement>;
-        setAnnouncement(apiResponse.data);
-      } catch (error: any) {
-        toast({
-          variant: 'destructive',
-          title: '获取公告详情失败',
-          description: error.message || '请稍后重试',
-        });
-        router.push('/announcements');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAnnouncement();
-  }, [params.id, router, toast]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className='flex justify-center items-center min-h-[200px]'>
         <Loader2 className='h-8 w-8 animate-spin' />
@@ -44,9 +17,12 @@ export default function AnnouncementDetailPage({ params }: { params: { id: strin
     );
   }
 
-  if (!announcement) {
+  if (!data?.data) {
+    router.push('/announcements');
     return null;
   }
+
+  const announcement = data.data;
 
   return (
     <div className='container mx-auto py-12'>

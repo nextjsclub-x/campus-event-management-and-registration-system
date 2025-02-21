@@ -1,78 +1,71 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { APIStatusCode } from '@/schema/api-response.schema';
-import { 
-  getUserNotifications,
-  createNotification 
-} from '@/service/notification.service';
+import type { NextRequest } from 'next/server';
+import { getUserNotifications } from '@/models/notification';
+import { type APIResponse, APIStatusCode } from '@/types/api-response.types';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
+// 查询参数验证schema
+const querySchema = z.object({
+  isRead: z
+    .string()
+    .transform((val) => val === 'true')
+    .optional(),
+  page: z
+    .string()
+    .transform((val) => Number.parseInt(val, 10))
+    .pipe(z.number().positive())
+    .optional(),
+  pageSize: z
+    .string()
+    .transform((val) => Number.parseInt(val, 10))
+    .pipe(z.number().positive().max(100))
+    .optional(),
+});
 
-// 获取通知列表
+type QueryParams = z.infer<typeof querySchema>;
+
 export async function GET(request: NextRequest) {
   try {
-    const userId = Number(request.headers.get('X-User-Id'));
-    const { searchParams } = new URL(request.url);
-    const page = Number(searchParams.get('page')) || 1;
-    const pageSize = Number(searchParams.get('pageSize')) || 10;
-    const isRead = searchParams.get('isRead') === 'true';
+    // TODO: 从认证中获取用户ID
+    const userId = 1; // 临时写死，等待认证系统集成
 
-    if (!userId) {
-      return NextResponse.json({
-        code: APIStatusCode.BAD_REQUEST,
-        message: '未找到用户信息',
-        data: null
-      }, { status: 400 });
-    }
+    // 获取并验证查询参数
+    const { searchParams } = request.nextUrl;
+    const params = Object.fromEntries(searchParams.entries());
+    const validatedParams = querySchema.parse(params) as QueryParams;
 
+    // 获取通知列表
     const result = await getUserNotifications(
       userId,
-      { isRead },
-      { page, pageSize }
-    );
-
-    return NextResponse.json({
-      code: APIStatusCode.OK,
-      message: '获取通知列表成功',
-      data: result
-    });
-  } catch (error: any) {
-    return NextResponse.json(
+      { isRead: validatedParams.isRead },
       {
-        code: APIStatusCode.BAD_REQUEST,
-        message: error.message || '获取通知列表失败',
-        data: null
-      },
-      { status: 500 }
+        page: validatedParams.page,
+        pageSize: validatedParams.pageSize,
+      }
     );
-  }
-}
 
-// 创建通知
-export async function POST(request: NextRequest) {
-  try {
-    const userId = Number(request.headers.get('X-User-Id'));
-    if (!userId) {
-      return NextResponse.json({
+    const response: APIResponse = {
+      code: APIStatusCode.SUCCESS,
+      message: '获取通知列表成功',
+      data: result,
+    };
+    return Response.json(response);
+  } catch (error) {
+    console.error('获取通知列表失败:', error);
+
+    if (error instanceof z.ZodError) {
+      const response: APIResponse = {
         code: APIStatusCode.BAD_REQUEST,
-        message: '未找到用户信息',
-        data: null
-      }, { status: 400 });
+        message: '参数验证失败',
+        data: error.errors,
+      };
+      return Response.json(response, { status: 400 });
     }
 
-    const { activityId, message } = await request.json();
-    
-    const notification = await createNotification(userId, activityId, message);
-
-    return NextResponse.json({
-      code: APIStatusCode.OK,
-      message: '创建通知成功',
-      data: notification
-    });
-  } catch (error: any) {
-    return NextResponse.json({
-      code: APIStatusCode.BAD_REQUEST,
-      message: error.message || '创建通知失败',
-      data: null
-    }, { status: 500 });
+    const response: APIResponse = {
+      code: APIStatusCode.INTERNAL_ERROR,
+      message: '获取通知列表失败',
+      data: null,
+    };
+    return Response.json(response, { status: 500 });
   }
 } 

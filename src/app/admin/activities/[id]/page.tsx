@@ -1,143 +1,159 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { get, put } from '@/utils/request/request';
-import { APIStatusCode } from '@/schema/api-response.schema';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { useActivity, useUpdateActivityStatus } from '@/hooks/use-activity';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'react-hot-toast';
-
-interface Activity {
-  id: number;
-  title: string;
-  description: string;
-  startTime: string;
-  endTime: string;
-  location: string;
-  capacity: number;
-  currentRegistrations: number;
-  status: number;
-  categoryId?: number;
-  organizerId?: number;
-}
+import { Skeleton } from '@/components/ui/skeleton';
+import { ActivityStatus, ActivityStatusTransitions, type ActivityStatusType } from '@/types/activity.types';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ActivityDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [activity, setActivity] = useState<Activity | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<Activity | null>(null);
+  const { toast } = useToast();
+  const { data, isLoading } = useActivity(Number(params.id));
+  const { mutate: updateStatus } = useUpdateActivityStatus(Number(params.id));
 
-  const fetchActivity = async () => {
-    try {
-      const response = await get(`/api/activities/${params.id}`);
-      if (response.code === APIStatusCode.OK) {
-        const activityData = response.data;
-        setActivity(activityData);
-        setFormData({
-          ...activityData,
-          startTime: new Date(activityData.startTime).toISOString().slice(0, 16),
-          endTime: new Date(activityData.endTime).toISOString().slice(0, 16),
-        });
-      } else {
-        console.error('获取活动详情失败:', response.message);
-      }
-    } catch (error) {
-      console.error('获取活动详情失败:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchActivity();
-  }, []);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => prev ? ({
-      ...prev,
-      [name]: value
-    }) : null);
-  };
-
-  const handleSubmit = async () => {
-    if (!formData) return;
-    
-    setSaving(true);
-    try {
-      const updateData = {
-        title: formData.title,
-        description: formData.description,
-        location: formData.location,
-        capacity: parseInt(String(formData.capacity), 10),
-        startTime: new Date(formData.startTime).toISOString(),
-        endTime: new Date(formData.endTime).toISOString(),
-      };
-
-      console.log('活动ID:', params.id, typeof params.id);
-      console.log('更新数据:', updateData);
-      console.log('更新数据类型:');
-      Object.entries(updateData).forEach(([key, value]) => {
-        console.log(`${key}:`, value, typeof value);
-      });
-
-      const response = await put(`/api/activities/${params.id}`, updateData);
-
-      if (response.code === APIStatusCode.OK) {
-        toast.success('活动更新成功！');
-        setActivity(formData);
-        setIsEditing(false);
-      } else {
-        console.error('更新失败响应:', response);
-        toast.error(response.message || '更新失败，请重试');
-      }
-    } catch (error: any) {
-      console.error('更新错误详情:', error);
-      toast.error(error.message || '更新失败，请重试');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
-    return <div className='text-center py-8'>加载中...</div>;
+  if (isLoading) {
+    return <Skeleton className='h-[400px]' />;
   }
 
-  if (!activity || !formData) {
+  const activity = data?.data;
+  if (!activity) {
     return <div className='text-center py-8'>未找到活动</div>;
   }
+
+  const handleApprove = () => {
+    const currentStatus = activity.status as ActivityStatusType;
+    console.log('当前状态:', currentStatus);
+    console.log('允许的转换:', ActivityStatusTransitions[currentStatus]);
+    console.log('目标状态:', ActivityStatus.PUBLISHED);
+
+    // 检查状态转换是否有效
+    const isValidTransition = ActivityStatusTransitions[currentStatus]?.includes(ActivityStatus.PUBLISHED);
+    console.log('是否允许转换:', isValidTransition);
+
+    if (!isValidTransition) {
+      toast({
+        title: '状态更新失败',
+        description: `当前状态(${currentStatus})不允许转换到已发布状态`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      updateStatus({
+        status: ActivityStatus.PUBLISHED,
+        reason: '管理员审核通过'
+      });
+      toast({
+        title: '状态更新成功',
+        description: '活动已发布',
+      });
+    } catch (error) {
+      console.error('状态更新错误:', error);
+      toast({
+        title: '状态更新失败',
+        description: error instanceof Error ? error.message : '更新失败，请重试',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleReject = () => {
+    const currentStatus = activity.status as ActivityStatusType;
+    console.log('当前状态:', currentStatus);
+    console.log('允许的转换:', ActivityStatusTransitions[currentStatus]);
+    console.log('目标状态:', ActivityStatus.DELETED);
+
+    // 检查状态转换是否有效
+    const isValidTransition = ActivityStatusTransitions[currentStatus]?.includes(ActivityStatus.DELETED);
+    console.log('是否允许转换:', isValidTransition);
+
+    if (!isValidTransition) {
+      toast({
+        title: '状态更新失败',
+        description: `当前状态(${currentStatus})不允许转换到已删除状态`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      updateStatus({
+        status: ActivityStatus.DELETED,
+        reason: '管理员审核不通过'
+      });
+      toast({
+        title: '状态更新成功',
+        description: '活动已删除',
+      });
+    } catch (error) {
+      console.error('状态更新错误:', error);
+      toast({
+        title: '状态更新失败',
+        description: error instanceof Error ? error.message : '更新失败，请重试',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getStatusBadge = (status: number) => {
+    switch (status) {
+      case ActivityStatus.PENDING:
+        return <Badge variant='secondary'>待审核</Badge>;
+      case ActivityStatus.PUBLISHED:
+        return <Badge>已发布</Badge>;
+      case ActivityStatus.CANCELLED:
+        return <Badge variant='outline'>已取消</Badge>;
+      case ActivityStatus.COMPLETED:
+        return <Badge variant='secondary'>已结束</Badge>;
+      case ActivityStatus.DELETED:
+        return <Badge variant='destructive'>已删除</Badge>;
+      default:
+        return <Badge variant='outline'>未知状态</Badge>;
+    }
+  };
 
   return (
     <div className='space-y-6'>
       <Card>
         <CardHeader className='flex flex-row items-center justify-between'>
-          <CardTitle>活动详情</CardTitle>
-          {!isEditing && (
-            <Button onClick={() => setIsEditing(true)}>
-              修改活动
-            </Button>
+          <div>
+            <CardTitle>活动详情</CardTitle>
+            <div className='mt-2'>
+              {getStatusBadge(activity.status)}
+              <span className='ml-2 text-sm text-muted-foreground'>
+                (状态码: {activity.status})
+              </span>
+            </div>
+          </div>
+          {activity.status === ActivityStatus.PENDING && (
+            <div className='flex gap-2'>
+              <Button onClick={handleApprove}
+                variant='default'>
+                通过
+              </Button>
+              <Button onClick={handleReject}
+                variant='destructive'>
+                拒绝
+              </Button>
+            </div>
           )}
         </CardHeader>
         <CardContent>
           <div className='grid grid-cols-2 gap-4'>
             <div className='space-y-2'>
               <h3 className='font-medium text-muted-foreground'>活动标题</h3>
-              {isEditing ? (
-                <Input
-                  name='title'
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  placeholder='请输入活动标题'
-                />
-              ) : (
-                <p>{activity.title}</p>
-              )}
+              <p>{activity.title}</p>
             </div>
             <div className='space-y-2'>
               <h3 className='font-medium text-muted-foreground'>活动分类</h3>
@@ -145,95 +161,27 @@ export default function ActivityDetailPage() {
             </div>
             <div className='space-y-2'>
               <h3 className='font-medium text-muted-foreground'>活动地点</h3>
-              {isEditing ? (
-                <Input
-                  name='location'
-                  value={formData.location}
-                  onChange={handleInputChange}
-                  placeholder='请输入活动地点'
-                />
-              ) : (
-                <p>{activity.location}</p>
-              )}
+              <p>{activity.location}</p>
             </div>
             <div className='space-y-2'>
               <h3 className='font-medium text-muted-foreground'>人数限制</h3>
-              {isEditing ? (
-                <Input
-                  type='number'
-                  name='capacity'
-                  value={formData.capacity}
-                  onChange={handleInputChange}
-                  placeholder='请输入人数限制'
-                  min='1'
-                />
-              ) : (
-                <p>{activity.currentRegistrations}/{activity.capacity}</p>
-              )}
+              <p>{activity.currentRegistrations}/{activity.capacity}</p>
             </div>
             <div className='space-y-2'>
               <h3 className='font-medium text-muted-foreground'>开始时间</h3>
-              {isEditing ? (
-                <Input
-                  type='datetime-local'
-                  name='startTime'
-                  value={formData.startTime}
-                  onChange={handleInputChange}
-                />
-              ) : (
-                <p>{new Date(activity.startTime).toLocaleString()}</p>
-              )}
+              <p>{new Date(activity.startTime).toLocaleString()}</p>
             </div>
             <div className='space-y-2'>
               <h3 className='font-medium text-muted-foreground'>结束时间</h3>
-              {isEditing ? (
-                <Input
-                  type='datetime-local'
-                  name='endTime'
-                  value={formData.endTime}
-                  onChange={handleInputChange}
-                />
-              ) : (
-                <p>{new Date(activity.endTime).toLocaleString()}</p>
-              )}
+              <p>{new Date(activity.endTime).toLocaleString()}</p>
             </div>
           </div>
           <div className='mt-4 space-y-2'>
             <h3 className='font-medium text-muted-foreground'>活动描述</h3>
-            {isEditing ? (
-              <Textarea
-                name='description'
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder='请输入活动描述'
-                rows={4}
-              />
-            ) : (
-              <p className='whitespace-pre-wrap'>{activity.description}</p>
-            )}
+            <p className='whitespace-pre-wrap'>{activity.description}</p>
           </div>
         </CardContent>
-        {isEditing && (
-          <CardFooter className='flex justify-end space-x-4'>
-            <Button
-              variant='outline'
-              onClick={() => {
-                setIsEditing(false);
-                setFormData(activity);
-              }}
-              disabled={saving}
-            >
-              取消
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={saving}
-            >
-              {saving ? '保存中...' : '保存'}
-            </Button>
-          </CardFooter>
-        )}
       </Card>
     </div>
   );
-} 
+}

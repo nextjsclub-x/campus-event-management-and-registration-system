@@ -1,5 +1,6 @@
 export { register } from './register';
 export { login } from './login';
+export { signout } from './signout';
 export { getUserById } from './get-user-by-id';
 export { getUserByEmail } from './get-user-by-email';
 export { getUsers } from './get-users';

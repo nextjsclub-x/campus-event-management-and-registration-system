@@ -1,49 +1,71 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { APIStatusCode } from '@/schema/api-response.schema';
-import { serverLoginUser } from '@/service/user.service';
+import { NextResponse } from 'next/server';
+import { login } from '@/models/user/login';
+import { z } from 'zod';
+import { type APIResponse, APIStatusCode } from '@/types/api-response.types';
+import type { UserPayload } from '@/types/user.type';
 
-export const runtime = 'nodejs';
+// 登录请求体验证schema
+const signInSchema = z.object({
+  email: z.string().email('邮箱格式不正确'),
+  password: z.string().min(6, '密码至少6位'),
+});
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    // 解析请求体
+    const body = await request.json();
 
-    // 1. 基础参数验证
-    if (!email || !password) {
-      return NextResponse.json({
+    // 验证请求参数
+    const result = signInSchema.safeParse(body);
+    if (!result.success) {
+      // 参数验证失败响应
+      const response: APIResponse = {
         code: APIStatusCode.BAD_REQUEST,
-        message: '请提供邮箱和密码',
-        data: null
-      }, { status: 400 });
+        message: result.error.issues[0].message,
+        data: null,
+      };
+      return NextResponse.json(response, { status: response.code });
     }
 
-    // 2. 邮箱格式验证
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json({
-        code: APIStatusCode.BAD_REQUEST,
-        message: '邮箱格式不正确',
-        data: null
-      }, { status: 400 });
-    }
+    const { email, password } = result.data;
 
-    // 3. 调用service层进行登录
-    const loginResult = await serverLoginUser(email, password);
+    // 调用登录服务
+    const { token, user } = await login(email, password);
 
-    // 4. 返回成功响应
-    return NextResponse.json({
-      code: APIStatusCode.OK,
+    // 登录成功响应
+    const response: APIResponse<{ token: string; user: UserPayload }> = {
+      code: APIStatusCode.SUCCESS,
       message: '登录成功',
-      data: loginResult.data
-    }, { status: 200 });
+      data: {
+        token,
+        user: {
+          id: String(user.id),
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          status: String(user.status),
+          studentId: user.studentId,
+        },
+      },
+    };
+    return NextResponse.json(response, { status: response.code });
+  } catch (error: unknown) {
+    // 处理用户不存在或密码错误
+    if (error instanceof Error) {
+      const response: APIResponse = {
+        code: APIStatusCode.BAD_REQUEST,
+        message: error.message,
+        data: null,
+      };
+      return NextResponse.json(response, { status: response.code });
+    }
 
-  } catch (error: any) {
-    console.error('登录错误:', error);
-
-    return NextResponse.json({
-      code: APIStatusCode.UNAUTHORIZED,
-      message: typeof error === 'string' ? error : '登录失败，请检查邮箱和密码',
-      data: null
-    }, { status: 401 });
+    // 处理其他未知服务器错误
+    const response: APIResponse = {
+      code: APIStatusCode.INTERNAL_ERROR,
+      message: '服务器错误',
+      data: null,
+    };
+    return NextResponse.json(response, { status: response.code });
   }
 }

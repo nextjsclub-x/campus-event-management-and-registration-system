@@ -3,7 +3,7 @@
 import db from '@/database/neon.db';
 import { users } from '@/schema/user.schema';
 import type { UserRole } from '@/schema/user.schema';
-import { eq, sql, isNull, count, gte, lte } from 'drizzle-orm';
+import { eq, sql, isNull, count, gte, lte, and, desc } from 'drizzle-orm';
 import type { PaginationOptions, PaginatedResponse } from '@/types/pagination.types';
 
 /**
@@ -66,13 +66,14 @@ export async function getUsers(
   const [{ count: total }] = await db
     .select({ count: count(users.id) })
     .from(users)
-    .where(sql`${conditions.map((c) => `(${c})`).join(' AND ')}`);
+    .where(and(...conditions));
 
   // 构建并执行查询
   const items = await db
     .select()
     .from(users)
-    .where(sql`${conditions.map((c) => `(${c})`).join(' AND ')}`)
+    .where(and(...conditions))
+    .orderBy(desc(users.createdAt)) // 按创建时间倒序排序
     .limit(limit)
     .offset((page - 1) * limit);
 

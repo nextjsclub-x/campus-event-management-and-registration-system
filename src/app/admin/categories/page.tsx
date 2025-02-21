@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { get } from '@/utils/request/request';
-import { APIStatusCode } from '@/schema/api-response.schema';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -13,101 +11,116 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
+import { useCategoryList } from '@/hooks/use-category';
+import type { Category } from '@/types/category.types';
 
-interface Category {
-  id: number;
-  name: string;
-  description: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export default function AdminCategoriesPage() {
+export default function AnnouncementsPage() {
   const router = useRouter();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
-  const fetchCategories = async () => {
-    try {
-      const response = await get('/api/category');
-      if (response.code === APIStatusCode.OK) {
-        setCategories(response.data.categories);
-      } else {
-        alert(response.message || '获取分类列表失败');
-      }
-    } catch (error) {
-      console.error('获取分类列表失败:', error);
-      alert('获取分类列表失败');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: response, isLoading } = useCategoryList({
+    page,
+    pageSize
+  });
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-
+  const categories = response?.data?.items || [];
+  const totalPages = Math.ceil((response?.data?.total || 0) / pageSize);
 
   return (
-    <main className='container mx-auto px-4 py-8'>
-      <div className='flex justify-between items-center mb-8'>
-        <h1 className='text-3xl font-bold'>分类管理</h1>
-        <div className='space-x-4'>
-          <Button
-            onClick={() => router.push('/admin/categories/create')}
-          >
-            新增分类
-          </Button>
-          <Button
-            variant='outline'
-            onClick={() => router.push('/admin')}
-          >
-            返回
-          </Button>
+    <div>
+      <div className='mb-8 flex justify-between items-center'>
+        <div className='space-y-2'>
+          <h2 className='text-2xl font-bold'>分类列表</h2>
+          <p className='text-muted-foreground'>
+            管理所有活动分类
+          </p>
         </div>
+        <Button
+          onClick={() => router.push('/admin/categories/create')}
+        >
+          新增分类
+        </Button>
       </div>
 
-      {loading ? (
-        <div className='text-center'>加载中...</div>
-      ) : (
-        <div className='border rounded-md'>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>分类名称</TableHead>
-                <TableHead>描述</TableHead>
-                <TableHead>创建时间</TableHead>
-                <TableHead>更新时间</TableHead>
-                <TableHead>操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {categories.map((category) => (
-                <TableRow key={category.id}>
-                  <TableCell>{category.id}</TableCell>
-                  <TableCell className='font-medium'>{category.name}</TableCell>
-                  <TableCell>{category.description || '-'}</TableCell>
-                  <TableCell>{new Date(category.createdAt).toLocaleString()}</TableCell>
-                  <TableCell>{new Date(category.updatedAt).toLocaleString()}</TableCell>
-                  <TableCell>
-                    <div className='space-x-2'>
-                      <Button
-                        variant='outline'
-                        size='sm'
-                        onClick={() => router.push(`/admin/categories/${category.id}`)}
-                      >
-                        编辑
-                      </Button>
-                    </div>
-                  </TableCell>
+      <Card>
+        <CardHeader>
+          <CardTitle>全部分类</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className='flex justify-center py-8'>
+              <Loader2 className='h-8 w-8 animate-spin' />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>标题</TableHead>
+                  <TableHead>内容</TableHead>
+                  <TableHead>发布时间</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead>操作</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-    </main>
+              </TableHeader>
+              <TableBody>
+                {categories.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className='text-center'
+                    >
+                      暂无分类
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  categories.map((category: Category) => (
+                    <TableRow key={category.id}>
+                      <TableCell>{category.id}</TableCell>
+                      <TableCell>{category.name}</TableCell>
+                      <TableCell className='max-w-md truncate'>
+                        {category.description || '-'}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(category.createdAt).toLocaleString('zh-CN')}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs ${category.status === 1
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                          {category.status === 1 ? '已发布' : '未发布'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className='space-x-2'>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => router.push(`/admin/categories/${category.id}`)}
+                          >
+                            查看
+                          </Button>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => router.push(`/admin/categories/${category.id}/edit`)}
+                          >
+                            编辑
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
-} 
+}

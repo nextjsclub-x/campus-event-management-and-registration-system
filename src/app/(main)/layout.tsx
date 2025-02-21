@@ -1,6 +1,6 @@
+import Header from '@/components/header';
 
-import type { Metadata } from 'next';
-import { NavBar } from '@/components/common/nav-bar';
+import { signout } from '@/models/user';
 
 export default function RootLayout({
   children,
@@ -8,12 +8,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-
     <div className='w-full flex flex-col justify-start items-center'>
-      {/* <div  className='w-full'> */}
-      <NavBar />
+      <Header />
       {children}
-      {/* </div> */}
     </div>
   );
 }

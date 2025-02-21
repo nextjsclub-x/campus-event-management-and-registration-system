@@ -1,11 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { post } from '@/utils/request/request';
-import { APIStatusCode } from '@/schema/api-response.schema';
-import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import {
   Form,
@@ -18,6 +14,8 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
+import { useUpdatePassword } from '@/hooks/user-user';
+import { useSignOut } from '@/hooks/use-auth';
 
 const formSchema = z.object({
   oldPassword: z.string().min(8, '密码至少8位'),
@@ -30,7 +28,8 @@ const formSchema = z.object({
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const { mutateAsync: updatePassword, isPending: isUpdating } = useUpdatePassword();
+  const { mutateAsync: signOut, isPending: isSigningOut } = useSignOut();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -42,25 +41,30 @@ export default function UpdatePasswordPage() {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setLoading(true);
     try {
-      const response = await post('/api/profile/update-password', {
+      // 更新密码
+      await updatePassword({
         oldPassword: values.oldPassword,
         newPassword: values.newPassword,
       });
 
-      if (response.code === APIStatusCode.OK) {
-        toast.success('密码修改成功');
-        router.push('/profile');
-      } else {
-        toast.error(response.message || '修改失败');
-      }
+      // 更新成功后登出
+      await signOut();
+
+      // 跳转到登录页
+      router.push('/login');
     } catch (error) {
-      console.error('修改密码失败:', error);
-      toast.error('修改失败');
-    } finally {
-      setLoading(false);
+      // 错误已经在 hook 中处理了
+      console.error('操作失败:', error);
     }
+  };
+
+  const loading = isUpdating || isSigningOut;
+
+  const getButtonText = () => {
+    if (isUpdating) return '修改中...';
+    if (isSigningOut) return '退出中...';
+    return '确认修改';
   };
 
   return (
@@ -68,7 +72,7 @@ export default function UpdatePasswordPage() {
       <div className='w-full'>
         <div className='mb-6'>
           <h1 className='text-2xl font-bold mb-2'>修改密码</h1>
-          <p className='text-muted-foreground'>请输入您的原密码和新密码</p>
+          <p className='text-muted-foreground'>请输入您的原密码和新密码，修改成功后需要重新登录</p>
         </div>
 
         <Form {...form}>
@@ -81,11 +85,11 @@ export default function UpdatePasswordPage() {
                 <FormItem>
                   <FormLabel>原密码</FormLabel>
                   <FormControl>
-                    <Input 
-                      type='password' 
-                      placeholder='请输入原密码' 
+                    <Input
+                      type='password'
+                      placeholder='请输入原密码'
                       className='max-w-lg'
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -100,11 +104,11 @@ export default function UpdatePasswordPage() {
                 <FormItem>
                   <FormLabel>新密码</FormLabel>
                   <FormControl>
-                    <Input 
-                      type='password' 
-                      placeholder='请输入新密码' 
+                    <Input
+                      type='password'
+                      placeholder='请输入新密码'
                       className='max-w-lg'
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -119,11 +123,11 @@ export default function UpdatePasswordPage() {
                 <FormItem>
                   <FormLabel>确认新密码</FormLabel>
                   <FormControl>
-                    <Input 
-                      type='password' 
-                      placeholder='请再次输入新密码' 
+                    <Input
+                      type='password'
+                      placeholder='请再次输入新密码'
                       className='max-w-lg'
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -142,7 +146,7 @@ export default function UpdatePasswordPage() {
               </Button>
               <Button type='submit'
                 disabled={loading}>
-                {loading ? '提交中...' : '确认修改'}
+                {getButtonText()}
               </Button>
             </div>
           </form>

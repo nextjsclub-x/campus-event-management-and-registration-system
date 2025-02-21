@@ -1,94 +1,107 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { APIStatusCode } from '@/schema/api-response.schema';
-import {
-  createNotification,
-  getUserNotifications,
-  markNotificationAsRead,
-  getNotificationById
-} from '@/service/notification.service';
-import {
-  createAnnouncementService,
-  listAnnouncementsService,
-} from '@/service/announcement.service';
+import type { NextRequest } from 'next/server';
+import { z } from 'zod';
+import { createAnnouncement, listAnnouncements } from '@/models/announcement';
+import { type APIResponse, APIStatusCode } from '@/types/api-response.types';
 
-export const runtime = 'nodejs';
+// 查询参数验证schema
+const querySchema = z.object({
+  isPublished: z
+    .string()
+    .transform((val) => Number(val === 'true'))
+    .optional(),
+  page: z
+    .string()
+    .transform((val) => Number.parseInt(val, 10))
+    .pipe(z.number().positive())
+    .optional(),
+  pageSize: z
+    .string()
+    .transform((val) => Number.parseInt(val, 10))
+    .pipe(z.number().positive().max(100))
+    .optional(),
+});
 
-// 获取公告列表
+// 创建公告的请求体验证schema
+const createSchema = z.object({
+  title: z.string().min(1, '标题不能为空').max(100, '标题最长100字符'),
+  content: z.string().min(1, '内容不能为空'),
+  isPublished: z.number().optional(),
+});
+
+type QueryParams = z.infer<typeof querySchema>;
+type CreateParams = z.infer<typeof createSchema>;
+
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const page = Number(searchParams.get('page')) || 1;
-    const pageSize = Number(searchParams.get('pageSize')) || 10;
-    const isPublished = searchParams.get('isPublished') 
-      ? Number(searchParams.get('isPublished')) 
-      : undefined;
-    
-    // 从请求头获取用户ID
-    const userId = Number(request.headers.get('X-User-Id'));
-    
-    if (!userId) {
-      return NextResponse.json({
-        code: APIStatusCode.BAD_REQUEST,
-        message: '未找到用户信息',
-        data: null
-      }, { status: 400 });
-    }
-    
-    const result = await listAnnouncementsService({
-      page,
-      pageSize,
-      isPublished
+    // 获取并验证查询参数
+    const { searchParams } = request.nextUrl;
+    const params = Object.fromEntries(searchParams.entries());
+    const validatedParams = querySchema.parse(params) as QueryParams;
+
+    // 获取公告列表
+    const result = await listAnnouncements({
+      isPublished: validatedParams.isPublished,
+      page: validatedParams.page,
+      pageSize: validatedParams.pageSize,
     });
 
-    // 修改返回格式，确保符合 APIResponse 接口
-    return NextResponse.json({
-      code: APIStatusCode.OK,
+    const response: APIResponse = {
+      code: APIStatusCode.SUCCESS,
       message: '获取公告列表成功',
-      data: result
-    });
-  } catch (error: any) {
+      data: result,
+    };
+    return Response.json(response);
+  } catch (error) {
     console.error('获取公告列表失败:', error);
-    return NextResponse.json(
-      {
+
+    if (error instanceof z.ZodError) {
+      const response: APIResponse = {
         code: APIStatusCode.BAD_REQUEST,
-        message: error.message || '获取公告列表失败',
-        data: null
-      },
-      { status: 500 }
-    );
+        message: '参数验证失败',
+        data: error.errors,
+      };
+      return Response.json(response, { status: 400 });
+    }
+
+    const response: APIResponse = {
+      code: APIStatusCode.INTERNAL_ERROR,
+      message: '获取公告列表失败',
+      data: null,
+    };
+    return Response.json(response, { status: 500 });
   }
 }
 
-// 创建新公告
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, content, isPublished } = body;
+    const validatedBody = createSchema.parse(body) as CreateParams;
 
-    if (!title || !content) {
-      return NextResponse.json(
-        { error: '标题和内容不能为空' },
-        { status: 400 }
-      );
+    const announcement = await createAnnouncement(validatedBody);
+
+    const response: APIResponse = {
+      code: APIStatusCode.CREATED,
+      message: '创建公告成功',
+      data: announcement,
+    };
+    return Response.json(response, { status: 201 });
+  } catch (error) {
+    console.error('创建公告失败:', error);
+
+    if (error instanceof z.ZodError) {
+      const response: APIResponse = {
+        code: APIStatusCode.BAD_REQUEST,
+        message: '参数验证失败',
+        data: error.errors,
+      };
+      return Response.json(response, { status: 400 });
     }
 
-    const announcement = await createAnnouncementService({
-      title,
-      content,
-      isPublished
-    });
-
-    return NextResponse.json(announcement);
-  } catch (error: any) {
-    console.error('创建公告失败:', error);
-    // 增加错误详情
-    return NextResponse.json({
-      code: APIStatusCode.BAD_REQUEST,
-      message: `创建公告失败: ${error.message || '未知错误'}`,
-      data: {
-        error: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      }
-    }, { status: 500 });
+    const response: APIResponse = {
+      code: APIStatusCode.INTERNAL_ERROR,
+      message: '创建公告失败',
+      data: null,
+    };
+    return Response.json(response, { status: 500 });
   }
 } 

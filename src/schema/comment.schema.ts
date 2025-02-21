@@ -1,4 +1,5 @@
 import { bigserial, timestamp, text, smallint, bigint, pgTable, index, varchar } from 'drizzle-orm/pg-core';
+import { CommentStatusType } from '@/types/comment.types';
 import { users } from './user.schema';
 
 // 评论表：用于存储用户的评论信息
@@ -12,7 +13,7 @@ export const comments = pgTable('comments', {
   // 评论内容
   content: text('content').notNull(),
   // 评论状态：0-待审核 1-已通过 2-已拒绝 3-已撤回
-  status: smallint('status').notNull().default(0),
+  status: smallint('status').notNull().default(CommentStatusType.PENDING),
   // 创建时间
   createdAt: timestamp('created_at').defaultNow().notNull(),
   // 更新时间
@@ -26,4 +27,4 @@ export const comments = pgTable('comments', {
 
 // 类型推导
 export type Comment = typeof comments.$inferSelect;
-export type NewComment = typeof comments.$inferInsert; 
+export type NewComment = typeof comments.$inferInsert;

@@ -1,138 +1,134 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { APIStatusCode } from '@/schema/api-response.schema';
+import type { NextRequest } from 'next/server';
+import { z } from 'zod';
 import {
-  getNotificationById,
-  markNotificationAsRead
-} from '@/service/notification.service';
-import {
-  getAnnouncementService,
-  updateAnnouncementService,
-  deleteAnnouncementService,
-  publishAnnouncementService
-} from '@/service/announcement.service';
+  getAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+} from '@/models/announcement';
+import { type APIResponse, APIStatusCode } from '@/types/api-response.types';
 
-export const runtime = 'nodejs';
+// 更新公告的请求体验证schema
+const updateSchema = z.object({
+  title: z.string().min(1, '标题不能为空').max(100, '标题最长100字符').optional(),
+  content: z.string().min(1, '内容不能为空').optional(),
+  isPublished: z.number().optional(),
+});
 
-// 获取单个公告详情
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const id = Number(params.id);
-    const announcement = await getAnnouncementService(id);
-    
-    return NextResponse.json({
-      code: APIStatusCode.OK,
-      message: '获取公告详情成功',
-      data: announcement
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      {
-        code: APIStatusCode.BAD_REQUEST,
-        message: error.message || '获取公告详情失败',
-        data: null
-      },
-      { status: error.message === '公告不存在' ? 404 : 500 }
-    );
+type UpdateParams = z.infer<typeof updateSchema>;
+
+// 从路由参数中获取ID
+function getAnnouncementId(request: NextRequest) {
+  const id = request.url.split('/').pop();
+  if (!id || Number.isNaN(Number(id))) {
+    throw new Error('无效的公告ID');
   }
+  return Number(id);
 }
 
-// 标记公告为已读
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
-    const id = Number(params.id);
-    const { isPublished } = await request.json();
+    const id = getAnnouncementId(request);
+    const announcement = await getAnnouncement(id);
 
-    if (typeof isPublished !== 'number') {
-      return NextResponse.json(
-        {
-          code: APIStatusCode.BAD_REQUEST,
-          message: '发布状态参数无效',
-          data: null
-        },
-        { status: 400 }
-      );
+    if (!announcement) {
+      const response: APIResponse = {
+        code: APIStatusCode.NOT_FOUND,
+        message: '公告不存在',
+        data: null,
+      };
+      return Response.json(response, { status: 404 });
     }
 
-    const announcement = await publishAnnouncementService(id, isPublished);
-    
-    return NextResponse.json({
-      code: APIStatusCode.OK,
-      message: isPublished ? '发布公告成功' : '取消发布成功',
-      data: announcement
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      {
-        code: APIStatusCode.BAD_REQUEST,
-        message: error.message || '更新发布状态失败',
-        data: null
-      },
-      { status: error.message === '公告不存在或已被删除' ? 404 : 500 }
-    );
+    const response: APIResponse = {
+      code: APIStatusCode.SUCCESS,
+      message: '获取公告成功',
+      data: announcement,
+    };
+    return Response.json(response);
+  } catch (error) {
+    console.error('获取公告失败:', error);
+
+    const response: APIResponse = {
+      code: APIStatusCode.INTERNAL_ERROR,
+      message: '获取公告失败',
+      data: null,
+    };
+    return Response.json(response, { status: 500 });
   }
 }
 
-// PUT 更新公告
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest) {
   try {
-    const id = Number(params.id);
+    const id = getAnnouncementId(request);
     const body = await request.json();
-    const { title, content, isPublished } = body;
+    const validatedBody = updateSchema.parse(body) as UpdateParams;
 
-    const announcement = await updateAnnouncementService(id, {
-      title,
-      content,
-      isPublished
-    });
+    const announcement = await updateAnnouncement(id, validatedBody);
 
-    return NextResponse.json({
-      code: APIStatusCode.OK,
+    if (!announcement) {
+      const response: APIResponse = {
+        code: APIStatusCode.NOT_FOUND,
+        message: '公告不存在',
+        data: null,
+      };
+      return Response.json(response, { status: 404 });
+    }
+
+    const response: APIResponse = {
+      code: APIStatusCode.SUCCESS,
       message: '更新公告成功',
-      data: announcement
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      {
+      data: announcement,
+    };
+    return Response.json(response);
+  } catch (error) {
+    console.error('更新公告失败:', error);
+
+    if (error instanceof z.ZodError) {
+      const response: APIResponse = {
         code: APIStatusCode.BAD_REQUEST,
-        message: error.message || '更新公告失败',
-        data: null
-      },
-      { status: error.message === '公告不存在' ? 404 : 500 }
-    );
+        message: '参数验证失败',
+        data: error.errors,
+      };
+      return Response.json(response, { status: 400 });
+    }
+
+    const response: APIResponse = {
+      code: APIStatusCode.INTERNAL_ERROR,
+      message: '更新公告失败',
+      data: null,
+    };
+    return Response.json(response, { status: 500 });
   }
 }
 
-// DELETE 删除公告
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest) {
   try {
-    const id = Number(params.id);
-    const announcement = await deleteAnnouncementService(id);
-    
-    return NextResponse.json({
-      code: APIStatusCode.OK,
+    const id = getAnnouncementId(request);
+    const result = await deleteAnnouncement(id);
+
+    if (!result) {
+      const response: APIResponse = {
+        code: APIStatusCode.NOT_FOUND,
+        message: '公告不存在',
+        data: null,
+      };
+      return Response.json(response, { status: 404 });
+    }
+
+    const response: APIResponse = {
+      code: APIStatusCode.SUCCESS,
       message: '删除公告成功',
-      data: announcement
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      {
-        code: APIStatusCode.BAD_REQUEST,
-        message: error.message || '删除公告失败',
-        data: null
-      },
-      { status: error.message === '公告不存在或已被删除' ? 404 : 500 }
-    );
+      data: null,
+    };
+    return Response.json(response);
+  } catch (error) {
+    console.error('删除公告失败:', error);
+
+    const response: APIResponse = {
+      code: APIStatusCode.INTERNAL_ERROR,
+      message: '删除公告失败',
+      data: null,
+    };
+    return Response.json(response, { status: 500 });
   }
 } 

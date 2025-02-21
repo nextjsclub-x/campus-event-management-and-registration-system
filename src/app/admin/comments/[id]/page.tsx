@@ -1,13 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { get, patch, del } from '@/utils/request/request';
 import { Loader2 } from 'lucide-react';
+import { useComment, useUpdateCommentStatus, useDeleteComment } from '@/hooks/use-comment';
 import type { Comment } from '@/schema/comment.schema';
-import type { APIResponse } from '@/schema/api-response.schema';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,67 +27,30 @@ const CommentStatusMap = {
 
 export default function CommentDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [comment, setComment] = useState<Comment | null>(null);
+  const id = Number.parseInt(params.id, 10);
+  const { data, isLoading } = useComment(id);
+  const { mutate: updateStatus, isPending: isUpdating } = useUpdateCommentStatus();
+  const { mutate: deleteComment, isPending: isDeleting } = useDeleteComment();
 
-  useEffect(() => {
-    const fetchComment = async () => {
-      try {
-        const response = await get(`/api/comments/${params.id}`);
-        const apiResponse = response as APIResponse<Comment>;
-        setComment(apiResponse.data);
-      } catch (error: any) {
-        toast({
-          variant: 'destructive',
-          title: '获取评论详情失败',
-          description: error.message || '请稍后重试',
-        });
-        router.push('/admin/comments');
-      } finally {
-        setLoading(false);
+  const handleUpdateStatus = (status: number) => {
+    updateStatus({ id, status }, {
+      onSuccess: () => {
+        if (status === 2) { // 如果是驳回，返回列表
+          router.push('/admin/comments');
+        }
       }
-    };
-
-    fetchComment();
-  }, [params.id, router, toast]);
-
-  const handleUpdateStatus = async (status: number) => {
-    try {
-      const response = await patch(`/api/comments/${params.id}`, { status });
-      const apiResponse = response as APIResponse<Comment>;
-      setComment(apiResponse.data);
-      toast({
-        title: '更新成功',
-        description: status === 1 ? '留言已通过' : '留言已驳回'
-      });
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: '更新失败',
-        description: error.message || '请稍后重试'
-      });
-    }
+    });
   };
 
-  const handleDelete = async () => {
-    try {
-      await del(`/api/comments/${params.id}`);
-      toast({
-        title: '删除成功',
-        description: '留言已删除'
-      });
-      router.push('/admin/comments');
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: '删除失败',
-        description: error.message || '请稍后重试'
-      });
-    }
+  const handleDelete = () => {
+    deleteComment(id, {
+      onSuccess: () => {
+        router.push('/admin/comments');
+      }
+    });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className='flex justify-center items-center min-h-[200px]'>
         <Loader2 className='h-8 w-8 animate-spin' />
@@ -98,15 +58,17 @@ export default function CommentDetailPage({ params }: { params: { id: string } }
     );
   }
 
-  if (!comment) {
+  if (!data?.data) {
     return null;
   }
+
+  const comment = data.data;
 
   return (
     <div className='p-6'>
       <div className='mb-4'>
-        <Button 
-          variant='outline' 
+        <Button
+          variant='outline'
           onClick={() => router.push('/admin/comments')}
         >
           返回列表
@@ -125,7 +87,12 @@ export default function CommentDetailPage({ params }: { params: { id: string } }
             {comment.status !== 1 && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant='default'>通过</Button>
+                  <Button
+                    variant='default'
+                    disabled={isUpdating || isDeleting}
+                  >
+                    通过
+                  </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
@@ -146,7 +113,12 @@ export default function CommentDetailPage({ params }: { params: { id: string } }
             {comment.status !== 2 && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant='destructive'>驳回</Button>
+                  <Button
+                    variant='destructive'
+                    disabled={isUpdating || isDeleting}
+                  >
+                    驳回
+                  </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
@@ -166,7 +138,12 @@ export default function CommentDetailPage({ params }: { params: { id: string } }
             )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant='destructive'>删除</Button>
+                <Button
+                  variant='destructive'
+                  disabled={isUpdating || isDeleting}
+                >
+                  删除
+                </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>

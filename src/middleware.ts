@@ -1,92 +1,40 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifyToken } from '@/utils/jwt/token-utils';
-import { APIStatusCode } from '@/schema/api-response.schema';
-
-// 定义公开路由白名单
-const PUBLIC_ROUTES = [
-  '/api/sign-up',
-  '/api/sign-in',
-  '/api/sign-out',
-  '/api/category',
-  '/api/activities',
-  '/api/activities/[0-9]+',
-  '/.*', // 匹配根路径后的所有内容
-] as const;
+import { verifyToken } from '@/utils/jwt';
 
 export async function middleware(request: NextRequest) {
-  const {pathname} = request.nextUrl;
-  console.log('当前访问路径:', pathname);
-
-  // 检查是否为公开路由
-  if (PUBLIC_ROUTES.some(route => {
-    if (route.includes('[0-9]+')) {
-      // 对于包含正则的路由，使用正则匹配
-      const regex = new RegExp(`^${  route.replace('[0-9]+', '\\d+')  }$`);
-      return regex.test(pathname);
-    }
-    // 对于普通路由，使用完全匹配
-    return route === pathname;
-  })) {
-    console.log('当前为公开路由，无需验证');
-    return NextResponse.next();
-  }
-
-  // 获取token（优先从cookie获取，其次从Authorization header获取）
-  let token = request.cookies.get('token')?.value;
-  console.log('从cookie中获取的token:', token);
+  const token = request.cookies.get('token')?.value;
 
   if (!token) {
-    token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    console.log('从Authorization header中获取的token:', token);
-  }
-
-  if (!token) {
-    console.log('未找到token，用户未登录');
-    return NextResponse.json(
-      {
-        code: APIStatusCode.UNAUTHORIZED,
-        message: '未登录',
-        data: null
-      },
-      { status: 401 }  // 添加 HTTP 401 Unauthorized 状态码
-    );
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   try {
-    // 验证token
-    const decoded = await verifyToken(token);
-    const { id, role } = decoded;
-    const userId = typeof id === 'string' ? parseInt(id, 10) : id;
-    console.log('解析出的用户信息:', { userId, role });
-
-    // 将用户信息添加到请求头
+    const payload = await verifyToken(token);
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('X-User-Id', userId.toString());
-    requestHeaders.set('X-User-Role', role as string);
-    console.log('已将用户信息添加到请求头:', { 'X-User-Id': userId.toString(), 'X-User-Role': role });
+    requestHeaders.set('x-user-id', payload.id.toString());
+    requestHeaders.set('x-user-role', payload.role);
 
     return NextResponse.next({
       request: {
         headers: requestHeaders,
-      }
-    });
-  } catch (error: any) {
-    console.log('token验证失败:', error.message);
-    return NextResponse.json(
-      {
-        code: APIStatusCode.INVALID_TOKEN,
-        message: '无效的token',
-        data: null
       },
-      { status: 401 }  // 添加 HTTP 401 Unauthorized 状态码
-    );
+    });
+  } catch (error) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 }
 
-// 配置需要中间件处理的路由
 export const config = {
   matcher: [
-    '/api/:path*'
-  ]
+    '/admin/:path*',
+    '/api/admin/:path*',
+    '/api/activities/:path*',
+    '/api/announcements/:path*',
+    '/api/categories/:path*',
+    '/api/comments/:path*',
+    '/api/feedbacks/:path*',
+    '/api/registrations/:path*',
+    '/api/user/:path*',
+  ],
 };

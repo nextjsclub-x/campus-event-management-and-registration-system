@@ -7,35 +7,21 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { post } from '@/utils/request/request';
-import { APIStatusCode } from '@/schema/api-response.schema';
+import { useCreateCategory } from '@/hooks/use-category';
 
 export default function CreateCategoryPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const { mutate: createCategory, isPending } = useCreateCategory();
   const [formData, setFormData] = useState({
     name: '',
     description: ''
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
-    try {
-      const response = await post('/api/category', formData);
-      if (response.code === APIStatusCode.CREATED) {
-        alert('创建成功');
-        router.push('/admin/categories');
-      } else {
-        alert(response.message || '创建失败');
-      }
-    } catch (error) {
-      console.error('创建分类失败:', error);
-      alert('创建失败');
-    } finally {
-      setLoading(false);
-    }
+    createCategory(formData, {
+      onSuccess: () => router.push('/admin/categories')
+    });
   };
 
   return (
@@ -50,14 +36,22 @@ export default function CreateCategoryPage() {
         </Button>
       </div>
 
-      <form onSubmit={handleSubmit}
-        className='max-w-2xl space-y-6'>
-        <div className='space-y-2'>
-          <label className='text-sm font-medium'>
+      <form
+        onSubmit={handleSubmit}
+        className='max-w-2xl space-y-6'
+      >
+        <div
+          className='space-y-2'
+        >
+          <label
+            htmlFor='name'
+            className='text-sm font-medium'
+          >
             分类名称
             <span className='text-red-500 ml-1'>*</span>
           </label>
           <Input
+            id='name'
             required
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -65,9 +59,17 @@ export default function CreateCategoryPage() {
           />
         </div>
 
-        <div className='space-y-2'>
-          <label className='text-sm font-medium'>分类描述</label>
+        <div
+          className='space-y-2'
+        >
+          <label
+            htmlFor='description'
+            className='text-sm font-medium'
+          >
+            分类描述
+          </label>
           <Textarea
+            id='description'
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             placeholder='请输入分类描述'
@@ -75,12 +77,14 @@ export default function CreateCategoryPage() {
           />
         </div>
 
-        <div className='flex gap-4'>
+        <div
+          className='flex gap-4'
+        >
           <Button
             type='submit'
-            disabled={loading}
+            disabled={isPending}
           >
-            {loading ? '创建中...' : '创建分类'}
+            {isPending ? '创建中...' : '创建分类'}
           </Button>
           <Button
             type='button'
@@ -93,4 +97,4 @@ export default function CreateCategoryPage() {
       </form>
     </main>
   );
-} 
+}

@@ -1,156 +1,181 @@
-import { type NextRequest, NextResponse } from 'next/server';
-import { APIStatusCode } from '@/schema/api-response.schema';
-import {
-	getActivity,
-	updateActivity,
-	deleteActivity,
-	updateActivityStatus,
-} from '@/service/activity.service';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { 
+  getActivity,
+  updateActivity,
+  deleteActivity 
+} from '@/models/activity';
+import { type APIResponse, APIStatusCode } from '@/types/api-response.types';
+import { z } from 'zod';
 import { ActivityStatus } from '@/types/activity.types';
 
-export const runtime = 'nodejs';
+// 更新活动请求验证schema
+const updateActivitySchema = z.object({
+  title: z.string().min(1, '标题不能为空').max(255, '标题不能超过255个字符').optional(),
+  description: z.string().min(1, '描述不能为空').optional(),
+  startTime: z.string().datetime('开始时间格式不正确').optional(),
+  endTime: z.string().datetime('结束时间格式不正确').optional(),
+  location: z.string().min(1, '地点不能为空').max(255, '地点不能超过255个字符').optional(),
+  capacity: z.number().int().positive('容量必须为正整数').optional(),
+  categoryId: z.number().int().positive('类别ID必须为正整数').optional(),
+}).refine(
+  (data) => {
+    if (data.startTime && data.endTime) {
+      return new Date(data.startTime) < new Date(data.endTime);
+    }
+    return true;
+  },
+  {
+    message: '开始时间必须早于结束时间',
+    path: ['startTime'],
+  }
+);
 
-// 获取单个活动详情
 export async function GET(
-	request: NextRequest,
-	{ params }: { params: { id: string } },
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
-	try {
-		const id = Number(params.id);
-		const activity = await getActivity(id);
+  try {
+    const activityId = Number.parseInt(params.id, 10);
+    if (Number.isNaN(activityId)) {
+      const response: APIResponse = {
+        code: APIStatusCode.BAD_REQUEST,
+        message: '无效的活动ID',
+        data: null,
+      };
+      return Response.json(response, { status: 400 });
+    }
 
-		return NextResponse.json({
-			code: APIStatusCode.OK,
-			message: '获取活动详情成功',
-			data: activity,
-		});
-	} catch (error: any) {
-		return NextResponse.json(
-			{
-				code: APIStatusCode.BAD_REQUEST,
-				message: error.message || '获取活动详情失败',
-				data: null,
-			},
-			{ status: error.message === '活动不存在' ? 404 : 500 },
-		);
-	}
+    const activity = await getActivity(activityId);
+
+    const response: APIResponse = {
+      code: APIStatusCode.SUCCESS,
+      message: '获取活动详情成功',
+      data: activity,
+    };
+    return Response.json(response);
+  } catch (error) {
+    console.error('获取活动详情失败:', error);
+
+    const response: APIResponse = {
+      code: APIStatusCode.INTERNAL_ERROR,
+      message: '获取活动详情失败',
+      data: null,
+    };
+    return Response.json(response, { status: 500 });
+  }
 }
 
-// 更新活动信息
 export async function PUT(
-	request: NextRequest,
-	{ params }: { params: { id: string } },
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
-	try {
-		const id = Number(params.id);
-		const organizerId = Number(request.headers.get('X-User-Id'));
-		const body = await request.json();
+  try {
+    // 1. 验证用户登录状态
+    const userId = request.headers.get('x-user-id');
+    if (!userId) {
+      const response: APIResponse = {
+        code: APIStatusCode.UNAUTHORIZED,
+        message: '请先登录',
+        data: null,
+      };
+      return NextResponse.json(response, { status: response.code });
+    }
 
-		if (!organizerId) {
-			return NextResponse.json(
-				{
-					code: APIStatusCode.BAD_REQUEST,
-					message: '未找到组织者信息',
-					data: null,
-				},
-				{ status: 400 },
-			);
-		}
+    // 2. 验证活动ID
+    const activityId = Number.parseInt(params.id, 10);
+    if (Number.isNaN(activityId)) {
+      const response: APIResponse = {
+        code: APIStatusCode.BAD_REQUEST,
+        message: '无效的活动ID',
+        data: null,
+      };
+      return Response.json(response, { status: 400 });
+    }
 
-		const activity = await updateActivity(id, organizerId, body);
+    // 3. 获取并验证请求数据
+    const body = await request.json();
+    const result = updateActivitySchema.safeParse(body);
+    if (!result.success) {
+      const response: APIResponse = {
+        code: APIStatusCode.BAD_REQUEST,
+        message: result.error.issues[0].message,
+        data: null,
+      };
+      return NextResponse.json(response, { status: response.code });
+    }
 
-		return NextResponse.json({
-			code: APIStatusCode.OK,
-			message: '更新活动成功',
-			data: activity,
-		});
-	} catch (error: any) {
-		return NextResponse.json(
-			{
-				code: APIStatusCode.BAD_REQUEST,
-				message: error.message || '更新活动失败',
-				data: null,
-			},
-			{ status: error.message === '活动不存在' ? 404 : 500 },
-		);
-	}
+    // 4. 更新活动
+    const activity = await updateActivity(activityId, Number(userId), {
+      ...result.data,
+      startTime: result.data.startTime ? new Date(result.data.startTime) : undefined,
+      endTime: result.data.endTime ? new Date(result.data.endTime) : undefined,
+    });
+
+    // 5. 返回成功响应
+    const response: APIResponse = {
+      code: APIStatusCode.SUCCESS,
+      message: '活动更新成功',
+      data: activity,
+    };
+    return NextResponse.json(response, { status: response.code });
+  } catch (error) {
+    console.error('更新活动失败:', error);
+
+    const response: APIResponse = {
+      code: APIStatusCode.INTERNAL_ERROR,
+      message: '更新活动失败',
+      data: null,
+    };
+    return NextResponse.json(response, { status: 500 });
+  }
 }
 
-// 更新活动状态
-export async function PATCH(
-	request: NextRequest,
-	{ params }: { params: { id: string } },
-) {
-	try {
-		const id = Number(params.id);
-		const organizerId = Number(request.headers.get('X-User-Id'));
-		const { status } = await request.json();
-
-		if (!organizerId) {
-			return NextResponse.json(
-				{
-					code: APIStatusCode.BAD_REQUEST,
-					message: '未找到组织者信息',
-					data: null,
-				},
-				{ status: 400 },
-			);
-		}
-
-		const activity = await updateActivityStatus(id, organizerId, status);
-
-		return NextResponse.json({
-			code: APIStatusCode.OK,
-			message: '更新活动状态成功',
-			data: activity,
-		});
-	} catch (error: any) {
-		return NextResponse.json(
-			{
-				code: APIStatusCode.BAD_REQUEST,
-				message: error.message || '更新活动状态失败',
-				data: null,
-			},
-			{ status: error.message === '活动不存在' ? 404 : 500 },
-		);
-	}
-}
-
-// 删除活动
 export async function DELETE(
-	request: NextRequest,
-	{ params }: { params: { id: string } },
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
-	try {
-		const id = Number(params.id);
-		const organizerId = Number(request.headers.get('X-User-Id'));
+  try {
+    // 1. 验证用户登录状态
+    const userId = request.headers.get('x-user-id');
+    if (!userId) {
+      const response: APIResponse = {
+        code: APIStatusCode.UNAUTHORIZED,
+        message: '请先登录',
+        data: null,
+      };
+      return NextResponse.json(response, { status: response.code });
+    }
 
-		if (!organizerId) {
-			return NextResponse.json(
-				{
-					code: APIStatusCode.BAD_REQUEST,
-					message: '未找到组织者信息',
-					data: null,
-				},
-				{ status: 400 },
-			);
-		}
+    // 2. 验证活动ID
+    const activityId = Number.parseInt(params.id, 10);
+    if (Number.isNaN(activityId)) {
+      const response: APIResponse = {
+        code: APIStatusCode.BAD_REQUEST,
+        message: '无效的活动ID',
+        data: null,
+      };
+      return Response.json(response, { status: 400 });
+    }
 
-		const activity = await deleteActivity(id, organizerId);
+    // 3. 删除活动
+    await deleteActivity(activityId, Number(userId));
 
-		return NextResponse.json({
-			code: APIStatusCode.OK,
-			message: '删除活动成功',
-			data: activity,
-		});
-	} catch (error: any) {
-		return NextResponse.json(
-			{
-				code: APIStatusCode.BAD_REQUEST,
-				message: error.message || '删除活动失败',
-				data: null,
-			},
-			{ status: error.message === '活动不存在' ? 404 : 500 },
-		);
-	}
-}
+    // 4. 返回成功响应
+    const response: APIResponse = {
+      code: APIStatusCode.SUCCESS,
+      message: '活动删除成功',
+      data: null,
+    };
+    return NextResponse.json(response, { status: response.code });
+  } catch (error) {
+    console.error('删除活动失败:', error);
+
+    const response: APIResponse = {
+      code: APIStatusCode.INTERNAL_ERROR,
+      message: '删除活动失败',
+      data: null,
+    };
+    return NextResponse.json(response, { status: 500 });
+  }
+} 
