@@ -2,6 +2,7 @@
 
 import type { APIResponse } from '@/types/api-response.types';
 import { useUserStore } from '@/store/user';
+import { useRouter } from 'next/navigation';
 
 interface RequestOptions extends RequestInit {
 	params?: Record<string, string>;
@@ -27,10 +28,10 @@ const getToken = () => {
 	return null;
 };
 
-// 添加这个函数用于页面跳转
+// 修改跳转函数
 const redirectToLogin = () => {
 	if (typeof window !== 'undefined') {
-		window.location.href = '/login';
+		window.location.replace('/login');
 	}
 };
 
@@ -79,6 +80,7 @@ const request = async <T = unknown>(
 			method,
 			headers,
 			body: data ? JSON.stringify(data) : undefined,
+			cache: 'no-store',
 		});
 
 		const result = (await response.json()) as APIResponse<T>;
@@ -91,17 +93,16 @@ const request = async <T = unknown>(
 			// 调用登出接口
 			await fetch('/api/sign-out', {
 				method: 'POST',
-				body: JSON.stringify({}),
 				headers: {
 					'Content-Type': 'application/json',
 				},
 			});
 
-			// 如果不是登出接口本身的请求，则跳转到登录页面并抛出错误
-			if (finalUrl !== '/api/sign-out') {
+			// 如果不是登出接口本身的请求，则跳转到登录页面
+			if (!finalUrl.includes('/api/sign-out')) {
 				redirectToLogin();
-				throw new RequestError(result.message, result.code, result.data);
 			}
+			throw new RequestError(result.message || '未授权访问', response.status, result.data);
 		}
 
 		if (!response.ok) {

@@ -62,10 +62,17 @@ export async function GET(request: NextRequest) {
 		// 获取活动列表
 		const activities = await listActivities(filters);
 
-		return Response.json({
+		return new Response(JSON.stringify({
 			code: APIStatusCode.SUCCESS,
 			message: '获取活动列表成功',
 			data: activities,
+		}), {
+			headers: {
+				'Content-Type': 'application/json',
+				'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+				'Pragma': 'no-cache',
+				'Expires': '0',
+			},
 		});
 	} catch (error) {
 		console.error('获取活动列表失败:', error);
@@ -77,7 +84,14 @@ export async function GET(request: NextRequest) {
 					message: '参数验证失败',
 					data: error.errors,
 				},
-				{ status: 400 },
+				{ 
+					status: 400,
+					headers: {
+						'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+						'Pragma': 'no-cache',
+						'Expires': '0',
+					},
+				},
 			);
 		}
 
@@ -87,7 +101,14 @@ export async function GET(request: NextRequest) {
 				message: '获取活动列表失败',
 				data: null,
 			},
-			{ status: 500 },
+			{ 
+				status: 500,
+				headers: {
+					'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+					'Pragma': 'no-cache',
+					'Expires': '0',
+				},
+			},
 		);
 	}
 }

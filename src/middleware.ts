@@ -4,14 +4,20 @@ import { verifyToken } from '@/utils/jwt';
 
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
+  const requestHeaders = new Headers(request.headers);
 
   if (!token) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    requestHeaders.set('x-user-id', '');
+    requestHeaders.set('x-user-role', 'student');
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
   try {
     const payload = await verifyToken(token);
-    const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-user-id', payload.id.toString());
     requestHeaders.set('x-user-role', payload.role);
 
@@ -21,7 +27,13 @@ export async function middleware(request: NextRequest) {
       },
     });
   } catch (error) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    requestHeaders.set('x-user-id', '');
+    requestHeaders.set('x-user-role', 'student');
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 }
 
