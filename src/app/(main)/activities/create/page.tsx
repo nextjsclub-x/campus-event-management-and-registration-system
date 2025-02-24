@@ -162,7 +162,7 @@ export default function CreateActivityPage() {
           title: '创建成功',
           description: '活动已成功创建',
         });
-        router.push('/admin/activities');
+        // router.push('/admin/activities');
       }
     } catch (error) {
       toast({

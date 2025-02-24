@@ -9,6 +9,7 @@ import {
   getOrganizerActivities,
   getPopularActivities,
   getActivityStats,
+  getMyActivities,
 } from '@/api/activity';
 import { useToast } from '@/hooks/use-toast';
 import type { ActivityStatusType } from '@/types/activity.types';
@@ -244,6 +245,37 @@ export function useActivityStats() {
   return useQuery({
     queryKey: ['activity-stats'],
     queryFn: getActivityStats,
+    retry: false,
+    gcTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+  });
+}
+
+/**
+ * 获取我的活动列表的hook
+ */
+export function useMyActivities(params?: {
+  status?: ActivityStatusType;
+  startTime?: Date;
+  endTime?: Date;
+  page?: number;
+  pageSize?: number;
+  orderBy?: 'startTime' | 'createdAt';
+  order?: 'asc' | 'desc';
+}) {
+  return useQuery({
+    queryKey: [
+      'my-activities',
+      params?.status,
+      params?.startTime?.toISOString(),
+      params?.endTime?.toISOString(),
+      params?.page,
+      params?.pageSize,
+      params?.orderBy,
+      params?.order
+    ],
+    queryFn: () => getMyActivities(params),
     retry: false,
     gcTime: 0,
     refetchOnMount: true,

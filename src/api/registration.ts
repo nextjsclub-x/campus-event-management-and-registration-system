@@ -6,7 +6,9 @@ import type {
   RegistrationStatusUpdateResponse,
   RegistrationAnalytics,
   ParticipationAnalytics,
+  Registration,
 } from '@/types/registration.types';
+import { RegistrationStatus } from '@/types/registration.types';
 import type { APIResponse } from '@/types/api-response.types';
 
 /**
@@ -111,6 +113,24 @@ export function getRegistrationAnalytics(params?: {
 }
 
 /**
+ * 通过报名申请
+ */
+export function approveRegistration(registrationId: number): Promise<APIResponse<RegistrationStatusUpdateResponse>> {
+  return put(`/api/registrations/${registrationId}/status`, {
+    status: RegistrationStatus.APPROVED,
+  });
+}
+
+/**
+ * 拒绝报名申请
+ */
+export function rejectRegistration(registrationId: number): Promise<APIResponse<RegistrationStatusUpdateResponse>> {
+  return put(`/api/registrations/${registrationId}/status`, {
+    status: RegistrationStatus.REJECTED,
+  });
+}
+
+/**
  * 使用示例：
  * ```typescript
  * // 获取活动的报名列表
@@ -141,5 +161,11 @@ export function getRegistrationAnalytics(params?: {
  *   activityId: 1,
  *   days: 30
  * });
+ * 
+ * // 通过报名
+ * await approveRegistration(1);
+ * 
+ * // 拒绝报名
+ * await rejectRegistration(1);
  * ```
- */ 
+ */

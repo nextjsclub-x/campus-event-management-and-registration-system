@@ -57,9 +57,12 @@ const Header = () => {
               <Link href='/profile'>
                 <Button variant='ghost'>个人信息</Button>
               </Link>
-              {/* <Link href='/my-activities'>
+              <Link href='/profile/activities'>
                 <Button variant='ghost'>我的活动</Button>
-              </Link> */}
+              </Link>
+              <Link href='/profile/registrations'>
+                <Button variant='ghost'>我的报名</Button>
+              </Link>
               <Button
                 variant='ghost'
                 onClick={handleSignout}

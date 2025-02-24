@@ -85,25 +85,25 @@ const request = async <T = unknown>(
 
 		const result = (await response.json()) as APIResponse<T>;
 
-		// 处理 401 状态码
-		if (response.status === 401) {
-			// 清空本地存储
-			useUserStore.getState().clearUserInfo();
+		// // 处理 401 状态码
+		// if (response.status === 401) {
+		// 	// 清空本地存储
+		// 	useUserStore.getState().clearUserInfo();
 
-			// 调用登出接口
-			await fetch('/api/sign-out', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-			});
+		// 	// 调用登出接口
+		// 	await fetch('/api/sign-out', {
+		// 		method: 'POST',
+		// 		headers: {
+		// 			'Content-Type': 'application/json',
+		// 		},
+		// 	});
 
-			// 如果不是登出接口本身的请求，则跳转到登录页面
-			if (!finalUrl.includes('/api/sign-out')) {
-				redirectToLogin();
-			}
-			throw new RequestError(result.message || '未授权访问', response.status, result.data);
-		}
+		// 	// 如果不是登出接口本身的请求，则跳转到登录页面
+		// 	if (!finalUrl.includes('/api/sign-out')) {
+		// 		redirectToLogin();
+		// 	}
+		// 	throw new RequestError(result.message || '未授权访问', response.status, result.data);
+		// }
 
 		if (!response.ok) {
 			throw new RequestError(result.message, result.code, result.data);

@@ -150,6 +150,46 @@ export const getActivityStats = () =>
   }>('/api/activities/stats');
 
 /**
+ * 获取我的活动列表
+ * @param params 查询参数
+ */
+export const getMyActivities = (params?: {
+  status?: ActivityStatusType;
+  startTime?: Date;
+  endTime?: Date;
+  page?: number;
+  pageSize?: number;
+  orderBy?: 'startTime' | 'createdAt';
+  order?: 'asc' | 'desc';
+}) => {
+  const searchParams = new URLSearchParams();
+
+  if (params?.status !== undefined) {
+    searchParams.append('status', params.status.toString());
+  }
+  if (params?.startTime) {
+    searchParams.append('startTime', params.startTime.toISOString());
+  }
+  if (params?.endTime) {
+    searchParams.append('endTime', params.endTime.toISOString());
+  }
+  if (params?.page) {
+    searchParams.append('page', params.page.toString());
+  }
+  if (params?.pageSize) {
+    searchParams.append('pageSize', params.pageSize.toString());
+  }
+  if (params?.orderBy) {
+    searchParams.append('orderBy', params.orderBy);
+  }
+  if (params?.order) {
+    searchParams.append('order', params.order);
+  }
+
+  return get<PaginatedResponse<Activity>>(`/api/activities/my?${searchParams.toString()}`);
+};
+
+/**
  * 使用示例：
  * ```typescript
  * // 获取活动列表

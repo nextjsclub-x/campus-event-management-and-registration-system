@@ -6,11 +6,15 @@ import {
   getRegistrationStats,
   getRegistrationAnalytics,
   getActivityRegistrations,
+  getUserRegistrations,
+  approveRegistration,
+  rejectRegistration,
 } from '@/api/registration';
 import { useToast } from '@/hooks/use-toast';
 import type { 
   AdminRegistrationsResponse,
   ActivityRegistrationsResponse,
+  UserRegistrationsResponse,
 } from '@/types/registration.types';
 import type { APIResponse } from '@/types/api-response.types';
 
@@ -141,6 +145,88 @@ export function useRegistrationAnalytics(params?: {
     gcTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
+  });
+}
+
+/**
+ * 获取用户报名列表的hook
+ */
+export function useUserRegistrations(userId: number, params?: {
+  page?: number;
+  pageSize?: number;
+}) {
+  return useQuery<APIResponse<UserRegistrationsResponse>, Error>({
+    queryKey: ['user-registrations', userId, params?.page, params?.pageSize],
+    queryFn: () => getUserRegistrations(userId, params),
+    enabled: !!userId,
+    retry: false,
+    gcTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+  });
+}
+
+/**
+ * 通过报名申请的hook
+ */
+export function useApproveRegistration() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: approveRegistration,
+    onSuccess: (response) => {
+      if (response.code === 200) {
+        toast({
+          title: '审核成功',
+          description: '已通过该报名申请',
+          variant: 'default',
+        });
+        // 审核成功后，使相关缓存失效
+        queryClient.invalidateQueries({ queryKey: ['registrations'] });
+        queryClient.invalidateQueries({ queryKey: ['activity-registrations'] });
+        queryClient.invalidateQueries({ queryKey: ['activity'] });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: '审核失败',
+        description: error.message || '请稍后重试',
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+/**
+ * 拒绝报名申请的hook
+ */
+export function useRejectRegistration() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: rejectRegistration,
+    onSuccess: (response) => {
+      if (response.code === 200) {
+        toast({
+          title: '审核成功',
+          description: '已拒绝该报名申请',
+          variant: 'default',
+        });
+        // 审核成功后，使相关缓存失效
+        queryClient.invalidateQueries({ queryKey: ['registrations'] });
+        queryClient.invalidateQueries({ queryKey: ['activity-registrations'] });
+        queryClient.invalidateQueries({ queryKey: ['activity'] });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: '审核失败',
+        description: error.message || '请稍后重试',
+        variant: 'destructive',
+      });
+    },
   });
 }
 

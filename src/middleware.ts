@@ -3,7 +3,8 @@ import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/utils/jwt';
 
 export async function middleware(request: NextRequest) {
-  const token = request.cookies.get('token')?.value;
+  const authHeader = request.headers.get('Authorization');
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
   const requestHeaders = new Headers(request.headers);
 
   if (!token) {
