@@ -6,14 +6,14 @@ import { sql } from 'drizzle-orm';
 import { ActivityStatus } from '@/types/activity.types';
 
 export async function getActivityStatusCount() {
-  const result = await db
-    .select({
-      status: activities.status,
-      count: sql<number>`count(*)`,
-    })
-    .from(activities)
-    .where(sql`${activities.status} != ${ActivityStatus.DELETED}`)
-    .groupBy(activities.status);
+	const result = await db
+		.select({
+			status: activities.status,
+			count: sql<number>`count(*)`,
+		})
+		.from(activities)
+		.where(sql`${activities.status} != ${ActivityStatus.DELETED}`)
+		.groupBy(activities.status);
 
-  return result;
-} 
+	return result;
+}

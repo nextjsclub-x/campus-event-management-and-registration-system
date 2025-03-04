@@ -11,19 +11,23 @@ import type { CommentStatusType } from '@/types/comment.types';
  * @throws Error - 当评论不存在时抛出错误
  * @returns 返回更新后的评论对象
  */
-export async function updateCommentStatus(id: number, status: CommentStatusType): Promise<Comment> {
-  const [comment] = await db
-    .update(comments)
-    .set({ 
-      status,
-      updatedAt: new Date()
-    })
-    .where(eq(comments.id, id))
-    .returning();
+export async function updateCommentStatus(
+	id: number,
+	status: CommentStatusType,
+): Promise<Comment> {
+	const [comment] = await db
+		.update(comments)
+		.set({
+			status,
+			updatedAt: new Date(),
+		})
+		.where(eq(comments.id, id))
+		.returning();
 
-  if (!comment) {
-    throw new Error('评论不存在');
-  }
+	if (!comment) {
+		throw new Error('评论不存在');
+	}
 
-  return comment;
-} 
+	return comment;
+}
+

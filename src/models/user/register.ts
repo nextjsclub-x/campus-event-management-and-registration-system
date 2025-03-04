@@ -7,12 +7,12 @@ import { hashPassword } from '@/utils/password_crypto';
 import type { UserRegisterRequest } from '@/types/user.type';
 
 class RegisterError extends Error {
-  code: number;
+	code: number;
 
-  constructor(message: string, code: number) {
-    super(message);
-    this.code = code;
-  }
+	constructor(message: string, code: number) {
+		super(message);
+		this.code = code;
+	}
 }
 
 /**
@@ -25,31 +25,32 @@ class RegisterError extends Error {
  * @returns 插入后的用户记录
  */
 export async function register(params: UserRegisterRequest) {
-  const { email, password, name, studentId } = params;
-  
-  // 1. 检查邮箱是否被使用
-  const [existingUser] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email));
-  if (existingUser) {
-    throw new RegisterError('该邮箱已被注册', 409);
-  }
+	const { email, password, name, studentId } = params;
 
-  // 2. 加密密码
-  const passwordHash = await hashPassword(password);
+	// 1. 检查邮箱是否被使用
+	const [existingUser] = await db
+		.select()
+		.from(users)
+		.where(eq(users.email, email));
+	if (existingUser) {
+		throw new RegisterError('该邮箱已被注册', 409);
+	}
 
-  // 3. 插入新用户
-  const [newUser] = await db
-    .insert(users)
-    .values({
-      email,
-      passwordHash,
-      name,
-      role: 'student',
-      studentId,
-    })
-    .returning();
+	// 2. 加密密码
+	const passwordHash = await hashPassword(password);
 
-  return newUser;
-} 
+	// 3. 插入新用户
+	const [newUser] = await db
+		.insert(users)
+		.values({
+			email,
+			passwordHash,
+			name,
+			role: 'student',
+			studentId,
+		})
+		.returning();
+
+	return newUser;
+}
+

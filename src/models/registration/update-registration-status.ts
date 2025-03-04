@@ -10,18 +10,19 @@ import type { RegistrationStatus } from '@/schema/registration.schema';
  * @returns 返回更新后的报名记录
  */
 export async function updateRegistrationStatus(
-  registrationId: number,
-  status: RegistrationStatus
+	registrationId: number,
+	status: RegistrationStatus,
 ) {
-  const [registration] = await db
-    .update(registrations)
-    .set({ status })
-    .where(eq(registrations.id, registrationId))
-    .returning();
+	const [registration] = await db
+		.update(registrations)
+		.set({ status })
+		.where(eq(registrations.id, registrationId))
+		.returning();
 
-  if (!registration) {
-    throw new Error('报名记录不存在');
-  }
+	if (!registration) {
+		throw new Error('报名记录不存在');
+	}
 
-  return registration;
-} 
+	return registration;
+}
+

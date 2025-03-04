@@ -1,74 +1,40 @@
-'use client';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { getUserById } from '@/models/user/get-user-by-id';
+import { updateUser } from '@/models/user/update-user';
+import { revalidatePath } from 'next/cache';
+import { ProfileClient } from './client';
 
-import { useCurrentUser } from '@/hooks/user-user';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-const getRoleText = (role: string) => {
-  switch (role) {
-    case 'admin':
-      return '管理员';
-    case 'teacher':
-      return '教师';
-    default:
-      return '学生';
-  }
-};
+async function handleUpdateName(name: string) {
+  'use server';
 
-export default function ProfilePage() {
-  const { data, isLoading, error } = useCurrentUser();
+  const headersList = headers();
+  const userId = headersList.get('x-user-id');
 
-  if (isLoading) {
-    return (
-      <div className='container py-8'>
-        <Card>
-          <CardHeader>
-            <CardTitle>个人信息</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Skeleton className='h-4 w-[250px]' />
-            <Skeleton className='h-4 w-[200px] mt-4' />
-          </CardContent>
-        </Card>
-      </div>
-    );
+  if (!userId) {
+    throw new Error('请先登录');
   }
 
-  if (error || !data?.data) {
-    return <div className='container py-8'>获取用户信息失败</div>;
-  }
-
-  const user = data.data;
-
-  return (
-    <div className='container py-8'>
-      <Card>
-        <CardHeader>
-          <CardTitle>个人信息</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className='space-y-4'>
-            <div>
-              <div className='font-medium'>邮箱</div>
-              <div>{user.email}</div>
-            </div>
-            <div>
-              <div className='font-medium'>姓名</div>
-              <div>{user.name}</div>
-            </div>
-            <div>
-              <div className='font-medium'>角色</div>
-              <div>{getRoleText(user.role)}</div>
-            </div>
-            {user.studentId && (
-              <div>
-                <div className='font-medium'>学号</div>
-                <div>{user.studentId}</div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  await updateUser(Number(userId), { name });
+  revalidatePath('/profile');
 }
+
+export default async function ProfilePage() {
+  const headersList = headers();
+  const userId = headersList.get('x-user-id');
+
+  if (!userId) {
+    redirect('/login');
+  }
+
+  const user = await getUserById(Number(userId));
+
+  return <ProfileClient
+    user={user}
+    updateAction={handleUpdateName}
+  />;
+}
+

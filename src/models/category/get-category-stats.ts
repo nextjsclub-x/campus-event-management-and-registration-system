@@ -4,12 +4,12 @@ import { activities } from '@/schema/activity.schema';
 import { checkCategoryExists } from './utils';
 
 export async function getCategoryStats(categoryId: number) {
-  await checkCategoryExists(categoryId);
+	await checkCategoryExists(categoryId);
 
-  const [stats] = await db
-    .select({
-      totalActivities: sql`count(*)`.mapWith(Number),
-      statusStats: sql`
+	const [stats] = await db
+		.select({
+			totalActivities: sql`count(*)`.mapWith(Number),
+			statusStats: sql`
         json_agg(
           json_build_object(
             'status', status,
@@ -17,7 +17,7 @@ export async function getCategoryStats(categoryId: number) {
           )
         )
       `.mapWith(JSON.parse),
-      recentActivities: sql`
+			recentActivities: sql`
         json_agg(
           json_build_object(
             'id', id,
@@ -32,10 +32,10 @@ export async function getCategoryStats(categoryId: number) {
           LIMIT 5
         ))
       `.mapWith(JSON.parse),
-    })
-    .from(activities)
-    .where(eq(activities.categoryId, categoryId))
-    .groupBy(activities.categoryId);
+		})
+		.from(activities)
+		.where(eq(activities.categoryId, categoryId))
+		.groupBy(activities.categoryId);
 
-  return stats;
-} 
+	return stats;
+}

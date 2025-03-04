@@ -10,6 +10,7 @@ import { eq } from 'drizzle-orm';
  * @returns 用户或 undefined
  */
 export async function getUserById(id: number) {
-  const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
-  return user;
-} 
+	const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+	return user;
+}
+

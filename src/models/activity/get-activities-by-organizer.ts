@@ -6,20 +6,22 @@ import { registrations } from '@/schema/registration.schema';
 import { eq, desc, sql } from 'drizzle-orm';
 
 export async function getActivitiesByOrganizer(organizerId: number) {
-  const result = await db
-    .select({
-      id: activities.id,
-      title: activities.title,
-      description: activities.description,
-      location: activities.location,
-      startTime: activities.startTime,
-      endTime: activities.endTime,
-      capacity: activities.capacity,
-      status: activities.status,
-      createdAt: activities.createdAt,
-      categoryId: activities.categoryId,
-      // 添加报名人数统计
-      currentRegistrations: sql<number>`
+	const result = await db
+		.select({
+			id: activities.id,
+			title: activities.title,
+			description: activities.description,
+			location: activities.location,
+			startTime: activities.startTime,
+			endTime: activities.endTime,
+			capacity: activities.capacity,
+			status: activities.status,
+			createdAt: activities.createdAt,
+			updatedAt: activities.updatedAt,
+			organizerId: activities.organizerId,
+			categoryId: activities.categoryId,
+			// 添加报名人数统计
+			currentRegistrations: sql<number>`
         COALESCE((
           SELECT COUNT(*)::int
           FROM ${registrations}
@@ -27,10 +29,10 @@ export async function getActivitiesByOrganizer(organizerId: number) {
           AND ${registrations.status} IN (1, 2)
         ), 0)
       `.as('current_registrations'),
-    })
-    .from(activities)
-    .where(eq(activities.organizerId, organizerId))
-    .orderBy(desc(activities.createdAt));
+		})
+		.from(activities)
+		.where(eq(activities.organizerId, organizerId))
+		.orderBy(desc(activities.createdAt));
 
-  return result;
-} 
+	return result;
+}

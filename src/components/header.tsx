@@ -1,19 +1,55 @@
-'use client';
-
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { Button } from '@/components/ui/button';
-import { useUserStore } from '@/store/user';
-import { useSignOut } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+import { verifyToken } from '@/utils/jwt';
+import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
+import { getUpcomingActivityReminders } from '@/service/notification';
 
-const Header = () => {
-  const { token, role, isAuthenticated } = useUserStore();
-  const signOut = useSignOut();
-  const router = useRouter();
+async function handleLogout() {
+  'use server';
 
-  const handleSignout = () => {
-    signOut.mutate();
-  };
+  // 删除 cookie
+  cookies().delete('token');
+
+  // 重新验证所有页面
+  revalidatePath('/');
+
+  // 重定向到首页
+  redirect('/');
+}
+
+// 添加类型定义
+interface UpcomingActivity {
+  activityId: number;
+  title: string;
+  startTime: Date;
+  location: string;
+  minutesToStart: number;
+}
+
+export async function Header() {
+  // 从 cookie 获取 token
+  const token = cookies().get('token')?.value;
+  let user = null;
+  // 指定具体类型
+  let upcomingActivities: UpcomingActivity[] = [];
+
+  // 验证 token 并获取用户信息
+  if (token) {
+    try {
+      user = await verifyToken(token);
+      // 如果用户已登录，获取即将开始的活动
+      if (user) {
+        // 确保 id 是 number 类型
+        upcomingActivities = await getUpcomingActivityReminders(
+          Number(user.id),
+        );
+      }
+    } catch (error) {
+      console.error('Token验证失败:', error);
+    }
+  }
 
   return (
     <div className='w-full bg-orange-100 border-b'>
@@ -32,24 +68,48 @@ const Header = () => {
             <Button variant='ghost'>社区留言</Button>
           </Link>
           <div className='relative group'>
-            <Button variant='ghost'>活动通知</Button>
+            <Button variant='ghost'>
+              活动通知
+              {upcomingActivities.length > 0 && (
+                <span className='ml-2 px-2 py-0.5 text-xs bg-red-500 text-white rounded-full'>
+                  {upcomingActivities.length}
+                </span>
+              )}
+            </Button>
             <div className='absolute hidden group-hover:block top-full mt-2 w-64 p-4 bg-white rounded-md shadow-lg border'>
               <h4 className='font-medium mb-2'>即将开始的活动</h4>
               <div className='space-y-2'>
-                <div className='text-sm p-2 hover:bg-gray-50 rounded'>
-                  <div className='font-medium'>暂无</div>
-
-                </div>
-
+                {upcomingActivities.length === 0 ? (
+                  <div className='text-sm p-2 text-gray-500'>
+                    暂无即将开始的活动
+                  </div>
+                ) : (
+                  upcomingActivities.map((activity) => (
+                    <Link
+                      key={activity.activityId}
+                      href={`/activities/${activity.activityId}`}
+                      className='block text-sm p-2 hover:bg-gray-50 rounded'
+                    >
+                      <div className='font-medium'>{activity.title}</div>
+                      <div className='text-xs text-gray-500 mt-1'>
+                        地点：{activity.location}
+                      </div>
+                      <div className='text-xs text-orange-500 mt-1'>
+                        {Math.floor(activity.minutesToStart / 60)}小时
+                        {Math.floor(activity.minutesToStart % 60)}分钟后开始
+                      </div>
+                    </Link>
+                  ))
+                )}
               </div>
             </div>
           </div>
         </div>
 
         <div className='flex items-center space-x-4'>
-          {isAuthenticated ? (
+          {user ? (
             <div className='flex items-center space-x-4'>
-              {role === 'admin' && (
+              {user.role === 'admin' && (
                 <Link href='/admin'>
                   <Button variant='ghost'>管理后台</Button>
                 </Link>
@@ -63,13 +123,12 @@ const Header = () => {
               <Link href='/profile/registrations'>
                 <Button variant='ghost'>我的报名</Button>
               </Link>
-              <Button
-                variant='ghost'
-                onClick={handleSignout}
-                disabled={signOut.isPending}
-              >
-                {signOut.isPending ? '退出中...' : '退出登录'}
-              </Button>
+              <form action={handleLogout}>
+                <Button type='submit'
+                  variant='ghost'>
+                  退出登录
+                </Button>
+              </form>
             </div>
           ) : (
             <div className='space-x-4'>
@@ -87,4 +146,3 @@ const Header = () => {
   );
 }
 
-export default Header;

@@ -10,14 +10,12 @@ import type { Comment } from './utils';
  * @returns 返回评论详情
  */
 export async function getCommentById(id: number): Promise<Comment> {
-  const [comment] = await db
-    .select()
-    .from(comments)
-    .where(eq(comments.id, id));
+	const [comment] = await db.select().from(comments).where(eq(comments.id, id));
 
-  if (!comment) {
-    throw new Error('评论不存在');
-  }
+	if (!comment) {
+		throw new Error('评论不存在');
+	}
 
-  return comment;
-} 
+	return comment;
+}
+

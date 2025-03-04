@@ -10,13 +10,13 @@ import * as bcrypt from 'bcryptjs';
  * @returns A promise that resolves to the hashed password string.
  */
 export async function hashPassword(
-  password: string,
-  rounds: number = 10
+	password: string,
+	rounds = 10,
 ): Promise<string> {
-  // Generate a salt and hash the password
-  const salt = await bcrypt.genSalt(rounds);
-  const hash = await bcrypt.hash(password, salt);
-  return hash;
+	// Generate a salt and hash the password
+	const salt = await bcrypt.genSalt(rounds);
+	const hash = await bcrypt.hash(password, salt);
+	return hash;
 }
 
 /**
@@ -27,8 +27,9 @@ export async function hashPassword(
  * @returns A promise that resolves to a boolean indicating whether the password is correct.
  */
 export async function verifyPassword(
-  passwordAttempt: string,
-  storedHash: string
+	passwordAttempt: string,
+	storedHash: string,
 ): Promise<boolean> {
-  return bcrypt.compare(passwordAttempt, storedHash);
+	return bcrypt.compare(passwordAttempt, storedHash);
 }
+

@@ -45,3 +45,4 @@ export async function login(email: string, password: string) {
 	// 4. 返回token和用户信息
 	return { token, user };
 }
+

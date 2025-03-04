@@ -11,11 +11,12 @@ import { eq } from 'drizzle-orm';
  * @returns 被软删除的用户
  */
 export async function softDeleteUser(id: number) {
-  const [deletedUser] = await db
-    .update(users)
-    .set({ deletedAt: new Date() })
-    .where(eq(users.id, id))
-    .returning();
+	const [deletedUser] = await db
+		.update(users)
+		.set({ deletedAt: new Date() })
+		.where(eq(users.id, id))
+		.returning();
 
-  return deletedUser;
-} 
+	return deletedUser;
+}
+

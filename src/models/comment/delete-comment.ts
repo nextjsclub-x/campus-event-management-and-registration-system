@@ -9,18 +9,18 @@ import { comments } from '@/schema/comment.schema';
  * @returns 返回成功消息
  */
 export async function deleteComment(id: number) {
-  const [comment] = await db
-    .update(comments)
-    .set({ 
-      deletedAt: new Date(),  // 设置删除时间，实现软删除
-      updatedAt: new Date()
-    })
-    .where(eq(comments.id, id))
-    .returning();
+	const [comment] = await db
+		.update(comments)
+		.set({
+			deletedAt: new Date(), // 设置删除时间，实现软删除
+			updatedAt: new Date(),
+		})
+		.where(eq(comments.id, id))
+		.returning();
 
-  if (!comment) {
-    throw new Error('评论不存在');
-  }
+	if (!comment) {
+		throw new Error('评论不存在');
+	}
 
-  return { message: '评论删除成功' };
-} 
+	return { message: '评论删除成功' };
+}

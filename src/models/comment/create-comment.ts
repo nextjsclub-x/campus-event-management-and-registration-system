@@ -8,12 +8,13 @@ import type { Comment, NewComment } from '@/schema/comment.schema';
  * @returns 返回创建成功的评论对象
  */
 export async function createComment(data: NewComment): Promise<Comment> {
-  const [comment] = await db.insert(comments)
-    .values({
-      ...data,
-      createdAt: new Date()
-    })
-    .returning();
-  
-  return comment;
-} 
+	const [comment] = await db
+		.insert(comments)
+		.values({
+			...data,
+			createdAt: new Date(),
+		})
+		.returning();
+
+	return comment;
+}

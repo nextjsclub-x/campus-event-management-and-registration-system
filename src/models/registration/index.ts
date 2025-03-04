@@ -12,4 +12,5 @@ export * from './get-participation-analytics';
 export * from './get-registration-stats';
 export * from './update-registration-status';
 export * from './get-registration-status-count';
-export * from './get-recent-registration-count'; 
+export * from './get-recent-registration-count';
+

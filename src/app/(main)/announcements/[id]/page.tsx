@@ -1,67 +1,27 @@
-'use client';
+import { getAnnouncement } from '@/models/announcement';
+import { notFound } from 'next/navigation';
+import { AnnouncementClient } from './client';
 
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
-import { useAnnouncement } from '@/hooks/use-announcement';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-export default function AnnouncementDetailPage({ params }: { params: { id: string } }) {
-  const router = useRouter();
-  const { data, isLoading } = useAnnouncement(Number(params.id));
+interface PageProps {
+	params: { id: string };
+}
 
-  if (isLoading) {
-    return (
-      <div className='flex justify-center items-center min-h-[200px]'>
-        <Loader2 className='h-8 w-8 animate-spin' />
-      </div>
-    );
-  }
+export default async function AnnouncementDetailPage({ params }: PageProps) {
+	const announcementId = Number.parseInt(params.id, 10);
 
-  if (!data?.data) {
-    router.push('/announcements');
-    return null;
-  }
+	try {
+		const announcement = await getAnnouncement(announcementId);
 
-  const announcement = data.data;
+		// 如果公告未发布，返回 404
+		if (!announcement.isPublished) {
+			return notFound();
+		}
 
-  return (
-    <div className='container mx-auto py-12'>
-      <div className='mb-6'>
-        <Button
-          variant='outline'
-          onClick={() => router.back()}
-          className='mb-8'
-        >
-          返回
-        </Button>
-      </div>
-
-      <article className='prose prose-lg max-w-none'>
-        <h1 className='text-4xl font-bold mb-6'>
-          {announcement.title}
-        </h1>
-
-        <div className='flex items-center gap-4 text-sm text-muted-foreground mb-8'>
-          <div>
-            发布时间：{new Date(announcement.createdAt).toLocaleString('zh-CN')}
-          </div>
-          {announcement.updatedAt !== announcement.createdAt && (
-            <div>
-              更新时间：{new Date(announcement.updatedAt).toLocaleString('zh-CN')}
-            </div>
-          )}
-        </div>
-
-        <div className='my-8 border-t border-b border-border py-8'>
-          <div className='whitespace-pre-wrap leading-relaxed text-lg'>
-            {announcement.content}
-          </div>
-        </div>
-
-        <div className='text-sm text-muted-foreground mt-8'>
-          {/* 可以添加其他元信息，比如阅读量等 */}
-        </div>
-      </article>
-    </div>
-  );
-} 
+		return <AnnouncementClient announcement={announcement} />;
+	} catch (error) {
+		return notFound();
+	}
+}

@@ -26,8 +26,10 @@ export const Carousel = () => {
       ref={emblaRef}>
       <div className='flex'>
         {[1, 2, 3, 4, 5].map((index) => (
-          <div key={index}
-            className='flex-[0_0_100%] min-w-0 relative h-[400px]'>
+          <div
+            key={index}
+            className='flex-[0_0_100%] min-w-0 relative h-[400px]'
+          >
             <Image
               src={`/slides/${index}.jpg`}
               alt={`Slide ${index}`}
@@ -41,3 +43,4 @@ export const Carousel = () => {
     </div>
   );
 };
+

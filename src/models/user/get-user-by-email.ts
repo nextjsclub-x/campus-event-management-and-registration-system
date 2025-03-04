@@ -10,10 +10,11 @@ import { eq } from 'drizzle-orm';
  * @returns 用户或 undefined
  */
 export async function getUserByEmail(email: string) {
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
-  return user;
-} 
+	const [user] = await db
+		.select()
+		.from(users)
+		.where(eq(users.email, email))
+		.limit(1);
+	return user;
+}
+

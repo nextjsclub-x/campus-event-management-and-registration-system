@@ -9,12 +9,13 @@ import { isNull, count } from 'drizzle-orm';
  * @returns number 当前用户数量
  */
 export async function countUsers() {
-  const [{ count: userCount }] = await db
-    .select({
-      count: count(users.id), // 使用 Drizzle 的 count 函数
-    })
-    .from(users)
-    .where(isNull(users.deletedAt));
+	const [{ count: userCount }] = await db
+		.select({
+			count: count(users.id), // 使用 Drizzle 的 count 函数
+		})
+		.from(users)
+		.where(isNull(users.deletedAt));
 
-  return userCount; // 直接返回 number 类型
-} 
+	return userCount; // 直接返回 number 类型
+}
+

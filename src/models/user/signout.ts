@@ -7,6 +7,7 @@ import { cookies } from 'next/headers';
  * 清除登录 cookie
  */
 export async function signout() {
-  const cookieStore = cookies();
-  cookieStore.delete('token');
-} 
+	const cookieStore = cookies();
+	cookieStore.delete('token');
+}
+
