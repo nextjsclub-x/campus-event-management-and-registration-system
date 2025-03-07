@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getUserById } from '@/models/user/get-user-by-id';
 import { updateUser } from '@/models/user/update-user';
+import { changePassword } from '@/models/user/change-password';
 import { revalidatePath } from 'next/cache';
 import { ProfileClient } from './client';
 
@@ -22,6 +23,20 @@ async function handleUpdateName(name: string) {
   revalidatePath('/profile');
 }
 
+async function handleChangePassword(currentPassword: string, newPassword: string) {
+  'use server';
+
+  const headersList = headers();
+  const userId = headersList.get('x-user-id');
+
+  if (!userId) {
+    throw new Error('请先登录');
+  }
+
+  await changePassword(userId, currentPassword, newPassword);
+  revalidatePath('/profile');
+}
+
 export default async function ProfilePage() {
   const headersList = headers();
   const userId = headersList.get('x-user-id');
@@ -35,6 +50,7 @@ export default async function ProfilePage() {
   return <ProfileClient
     user={user}
     updateAction={handleUpdateName}
+    changePasswordAction={handleChangePassword}
   />;
 }
 
