@@ -28,12 +28,14 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationEllipsis, PaginationPrevious, PaginationNext } from '@/components/ui/pagination';
+import { getUsers } from '@/models/user/get-users';
 
 interface UsersClientProps {
   users: User[];
   currentPage: number;
   totalPages: number;
   updateAction: (id: number, role: UserRole) => Promise<User>;
+  handleSoftDelete: (id: number) => Promise<void>;
 }
 
 const roleMap: Record<
@@ -50,11 +52,15 @@ export function UsersClient({
   currentPage,
   totalPages,
   updateAction,
+  handleSoftDelete,
 }: UsersClientProps) {
   const router = useRouter();
   const [page, setPage] = useState(currentPage);
   const [isPending, setIsPending] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>('student');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [userIdToDelete, setUserIdToDelete] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handlePageChange = (newPage: number) => {
     if (newPage !== page) {
@@ -74,6 +80,27 @@ export function UsersClient({
       console.error('更新用户角色失败:', error);
     } finally {
       setIsPending(false);
+    }
+  };
+
+  const handleDeleteUser = (userId: number) => {
+    setUserIdToDelete(userId);
+    setIsDialogOpen(true);
+  };
+
+  const refreshUsers = async () => {
+    const { items } = await getUsers({ page, limit: 10 }); // 假设每页10个用户
+  };
+
+  const confirmDelete = async () => {
+    if (userIdToDelete !== null) {
+      setIsLoading(true);
+      await handleSoftDelete(userIdToDelete);
+      setUserIdToDelete(null);
+      setIsDialogOpen(false);
+      await refreshUsers();
+      setIsLoading(false);
+      window.location.reload();
     }
   };
 
@@ -115,6 +142,8 @@ export function UsersClient({
         </Button>
       </div>
 
+      {isLoading && <div className='loader'>加载中...</div>}
+
       <Card>
         <CardHeader>
           <CardTitle>用户列表</CardTitle>
@@ -152,62 +181,11 @@ export function UsersClient({
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant='outline'
-                            size='sm'
-                            disabled={isPending}
-                          >
-                            修改角色
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>修改用户角色</AlertDialogTitle>
-                            <AlertDialogDescription className='space-y-4'>
-                              <div>当前用户：{user.name}</div>
-                              <div>当前角色：{roleMap[user.role]?.label}</div>
-                              <div className='pt-4'>
-                                <div className='mb-4'>选择新角色：</div>
-                                <RadioGroup
-                                  defaultValue={user.role}
-                                  onValueChange={(value) =>
-                                    setSelectedRole(value as UserRole)
-                                  }
-                                >
-                                  {Object.entries(roleMap).map(
-                                    ([role, { label }]) => (
-                                      <div
-                                        key={role}
-                                        className='flex items-center space-x-2'
-                                      >
-                                        <RadioGroupItem
-                                          value={role}
-                                          id={`role-${role}`}
-                                          disabled={role === user.role}
-                                        />
-                                        <Label htmlFor={`role-${role}`}>
-                                          {label}
-                                        </Label>
-                                      </div>
-                                    )
-                                  )}
-                                </RadioGroup>
-                              </div>
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>取消</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleRoleChange(user.id)}
-                              disabled={selectedRole === user.role}
-                            >
-                              确认修改
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <div className='flex items-center space-x-4'>
+                        <span>{user.name}</span>
+                        <Button onClick={() => handleRoleChange(user.id)}>修改角色</Button>
+                        <Button onClick={() => handleDeleteUser(user.id)}>删除</Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -241,6 +219,20 @@ export function UsersClient({
           </Pagination>
         </CardContent>
       </Card>
+
+      <AlertDialog open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>您确定要删除此用户吗？</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsDialogOpen(false)}>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>确认删除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }

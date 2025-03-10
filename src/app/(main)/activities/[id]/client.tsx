@@ -268,6 +268,12 @@ export function ActivityClient({
                 </div>
               )}
             </div>
+
+            {currentUser && activity.currentRegistrations < activity.capacity && (
+              <Button onClick={() => onRegister(activityId)}>
+                报名参加
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
