@@ -33,6 +33,8 @@ interface ActivityClientProps {
   onApprove: (registrationId: number, activityId: number) => Promise<void>;
   onReject: (registrationId: number, activityId: number) => Promise<void>;
   onGetUser: (userId: number) => Promise<User>;
+  onRegister: (activityId: number) => Promise<void>;
+  onCancel: (activityId: number) => Promise<void>;
 }
 
 export function ActivityClient({
@@ -46,6 +48,8 @@ export function ActivityClient({
   onApprove,
   onReject,
   onGetUser,
+  onRegister,
+  onCancel,
 }: ActivityClientProps) {
   const router = useRouter();
   const [users, setUsers] = useState<Record<number, User>>({});

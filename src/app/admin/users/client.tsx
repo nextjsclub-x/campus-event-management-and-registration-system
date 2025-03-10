@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationEllipsis, PaginationPrevious, PaginationNext } from '@/components/ui/pagination';
 
 interface UsersClientProps {
   users: User[];
@@ -56,10 +57,12 @@ export function UsersClient({
   const [selectedRole, setSelectedRole] = useState<UserRole>('student');
 
   const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-    const searchParams = new URLSearchParams();
-    searchParams.set('page', newPage.toString());
-    router.push(`/admin/users?${searchParams.toString()}`);
+    if (newPage !== page) {
+      setPage(newPage);
+      const searchParams = new URLSearchParams();
+      searchParams.set('page', newPage.toString());
+      router.push(`/admin/users?${searchParams.toString()}`);
+    }
   };
 
   const handleRoleChange = async (userId: number) => {
@@ -73,6 +76,34 @@ export function UsersClient({
       setIsPending(false);
     }
   };
+
+  const getPaginationItems = () => {
+    const items = [];
+    const totalPagesToShow = 5; // 显示的总页码数
+    const startPage = Math.max(2, currentPage - 2);
+    const endPage = Math.min(totalPages - 1, currentPage + 2);
+
+    // 添加第一页
+    items.push(1);
+
+    // 添加省略号
+    if (startPage > 2) items.push('...');
+
+    // 添加中间页码
+    for (let i = startPage; i <= endPage; i += 1) {
+      items.push(i);
+    }
+
+    // 添加省略号
+    if (endPage < totalPages - 1) items.push('...');
+
+    // 添加最后一页
+    if (totalPages > 1) items.push(totalPages);
+
+    return items;
+  };
+
+  const paginationItems = getPaginationItems();
 
   return (
     <main className='container mx-auto px-4 py-8'>
@@ -160,7 +191,7 @@ export function UsersClient({
                                           {label}
                                         </Label>
                                       </div>
-                                    ),
+                                    )
                                   )}
                                 </RadioGroup>
                               </div>
@@ -184,25 +215,32 @@ export function UsersClient({
             </TableBody>
           </Table>
 
-          <div className='flex justify-center gap-2 mt-4'>
-            <Button
-              variant='outline'
-              onClick={() => handlePageChange(page - 1)}
-              disabled={page === 1}
-            >
-              上一页
-            </Button>
-            <Button
-              variant='outline'
-              onClick={() => handlePageChange(page + 1)}
-              disabled={page === totalPages}
-            >
-              下一页
-            </Button>
-          </div>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious onClick={() => page > 1 && handlePageChange(page - 1)}>上一页</PaginationPrevious>
+              </PaginationItem>
+              {paginationItems.map((item) => (
+                <PaginationItem key={item}>
+                  {typeof item === 'number' ? (
+                    <PaginationLink
+                      onClick={() => handlePageChange(item)}
+                      isActive={item === currentPage}
+                    >
+                      {item}
+                    </PaginationLink>
+                  ) : (
+                    <PaginationEllipsis />
+                  )}
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext onClick={() => page < totalPages && handlePageChange(page + 1)}>下一页</PaginationNext>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </CardContent>
       </Card>
     </main>
   );
 }
-
