@@ -7,6 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import type { Announcement } from '@/models/announcement/utils';
 
 interface AnnouncementClientProps {
@@ -19,11 +30,13 @@ interface AnnouncementClientProps {
       isPublished?: boolean;
     },
   ) => Promise<Announcement>;
+  deleteAction: (id: number) => Promise<void>;
 }
 
 export function AnnouncementClient({
   announcement: initialAnnouncement,
   updateAction,
+  deleteAction,
 }: AnnouncementClientProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -48,6 +61,19 @@ export function AnnouncementClient({
     }
   };
 
+  const handleDelete = async () => {
+    setIsPending(true);
+    try {
+      await deleteAction(announcement.id);
+      router.push('/admin/announcements');
+      router.refresh();
+    } catch (error) {
+      console.error('删除公告失败:', error);
+    } finally {
+      setIsPending(false);
+    }
+  };
+
   if (!isEditing) {
     return (
       <main className='container mx-auto px-4 py-8'>
@@ -55,6 +81,28 @@ export function AnnouncementClient({
           <h1 className='text-3xl font-bold'>公告详情</h1>
           <div className='space-x-2'>
             <Button onClick={() => setIsEditing(true)}>编辑</Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">删除</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>确认删除</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    此操作将删除该公告。删除后不可恢复，是否确认？
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleDelete}
+                    disabled={isPending}
+                  >
+                    {isPending ? '删除中...' : '确认删除'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Button
               variant='outline'
               onClick={() => router.push('/admin/announcements')}
