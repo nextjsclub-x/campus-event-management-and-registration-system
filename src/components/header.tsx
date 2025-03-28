@@ -120,11 +120,15 @@ export async function Header() {
               <Link href='/profile/activities'>
                 <Button variant='ghost'>我的活动</Button>
               </Link>
+              <Link href='/profile/comments'>
+                <Button variant='ghost'>我的留言</Button>
+              </Link>
               <Link href='/profile/registrations'>
                 <Button variant='ghost'>我的报名</Button>
               </Link>
               <form action={handleLogout}>
-                <Button type='submit'
+                <Button
+                  type='submit'
                   variant='ghost'>
                   退出登录
                 </Button>
