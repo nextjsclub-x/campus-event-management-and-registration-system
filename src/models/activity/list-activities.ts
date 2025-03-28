@@ -2,13 +2,15 @@
 
 import db from '@/database/neon.db';
 import { activities } from '@/schema/activity.schema';
-import { eq, and, desc, asc, sql } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, or, ilike } from 'drizzle-orm';
 import {
 	ActivityStatus,
 	type ActivityStatusType,
 	type Activity,
 } from '@/types/activity.types';
 import type { PaginatedResponse } from '@/types/pagination.types';
+
+type SearchField = 'title' | 'description' | 'location' | 'all';
 
 export async function listActivities(filters: {
 	status?: ActivityStatusType;
@@ -19,6 +21,8 @@ export async function listActivities(filters: {
 	pageSize?: number;
 	orderBy?: 'startTime' | 'createdAt' | 'id';
 	order?: 'asc' | 'desc';
+	searchField?: SearchField;
+	keyword?: string;
 }): Promise<PaginatedResponse<Activity>> {
 	const {
 		status,
@@ -29,6 +33,8 @@ export async function listActivities(filters: {
 		pageSize = 20,
 		orderBy = 'startTime',
 		order = 'desc',
+		searchField,
+		keyword,
 	} = filters;
 
 	// 1. 构建查询条件
@@ -48,6 +54,30 @@ export async function listActivities(filters: {
 
 	if (endTime) {
 		conditions.push(sql`${activities.endTime} <= ${endTime}`);
+	}
+
+	// 添加关键词搜索条件
+	if (keyword) {
+		const searchPattern = `%${keyword}%`;
+		switch (searchField) {
+			case 'title':
+				conditions.push(ilike(activities.title, searchPattern));
+				break;
+			case 'description':
+				conditions.push(ilike(activities.description, searchPattern));
+				break;
+			case 'location':
+				conditions.push(ilike(activities.location, searchPattern));
+				break;
+			default:
+				conditions.push(
+					or(
+						ilike(activities.title, searchPattern),
+						ilike(activities.description, searchPattern),
+						ilike(activities.location, searchPattern)
+					)
+				);
+		}
 	}
 
 	// 2. 构建排序表达式
