@@ -20,20 +20,26 @@ export default async function ActivitiesPage({ searchParams }: PageProps) {
 		? (Number.parseInt(searchParams.status, 10) as ActivityStatusType)
 		: undefined;
 
-	const { items: activities } = await listActivities({
+	const currentPage = searchParams.page ? Number.parseInt(searchParams.page, 10) : 1;
+
+	const { items: activities, total, totalPages } = await listActivities({
 		status,
-		page: searchParams.page ? Number.parseInt(searchParams.page, 10) : 1,
+		page: currentPage,
 		pageSize: 10,
 		orderBy: 'id',
 		order: 'desc',
 	});
 
 	return (
-  <div className='p-6'>
-    <ActivitiesClient
-      activities={activities}
-      onStatusChange={handleStatusChange}
+		<div className='p-6'>
+			<ActivitiesClient
+				activities={activities}
+				onStatusChange={handleStatusChange}
+				currentStatus={status}
+				currentPage={currentPage}
+				totalPages={totalPages}
+				total={total}
 			/>
-  </div>
+		</div>
 	);
 }

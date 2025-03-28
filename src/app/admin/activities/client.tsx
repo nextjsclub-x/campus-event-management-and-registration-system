@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -19,6 +19,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Activity, ActivityStatusType } from '@/types/activity.types';
 import { ActivityStatus } from '@/types/activity.types';
@@ -27,6 +36,9 @@ interface ActivitiesClientProps {
   activities: Activity[];
   onStatusChange: (status: ActivityStatusType | undefined) => void;
   currentStatus?: ActivityStatusType;
+  currentPage: number;
+  totalPages: number;
+  total: number;
 }
 
 const statusMap: Record<
@@ -50,23 +62,29 @@ export function ActivitiesClient({
   activities,
   onStatusChange,
   currentStatus,
+  currentPage,
+  totalPages,
+  total,
 }: ActivitiesClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const handleStatusFilterChange = (value: string) => {
+    const params = new URLSearchParams(searchParams);
     if (value === 'all') {
-      onStatusChange(undefined);
-      return;
+      params.delete('status');
+    } else {
+      params.set('status', value);
     }
+    params.set('page', '1'); // 切换状态时重置页码
+    router.push(`${pathname}?${params.toString()}`);
+  };
 
-    try {
-      const numValue = Number(value);
-      if (isValidActivityStatus(numValue)) {
-        onStatusChange(numValue);
-      }
-    } catch (error) {
-      console.error('无效的状态值:', error);
-    }
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('page', page.toString());
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   return (
@@ -168,6 +186,53 @@ export function ActivitiesClient({
               )}
             </TableBody>
           </Table>
+
+          {totalPages > 1 && (
+            <div className='mt-4 flex justify-center'>
+              <Pagination>
+                <PaginationContent>
+                  {currentPage > 1 && (
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handlePageChange(currentPage - 1);
+                        }}
+                      />
+                    </PaginationItem>
+                  )}
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handlePageChange(page);
+                        }}
+                        isActive={currentPage === page}
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+
+                  {currentPage < totalPages && (
+                    <PaginationItem>
+                      <PaginationNext 
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handlePageChange(currentPage + 1);
+                        }}
+                      />
+                    </PaginationItem>
+                  )}
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
