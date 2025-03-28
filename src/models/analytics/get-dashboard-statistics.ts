@@ -15,9 +15,9 @@ export type DashboardStatistics = {
 		name: string;
 		count: number;
 	}[];
-	activityRatings: {
-		rating: number;
-		count: number;
+	popularActivities: {
+		activityName: string;
+		registrationCount: number;
 	}[];
 	topParticipants: {
 		name: string;
@@ -52,14 +52,18 @@ export async function getDashboardStatistics(): Promise<DashboardStatistics> {
 		)
 		.groupBy(activities.categoryId);
 
-	// 获取活动评分分布
-	const activityRatings = await db
+	// 获取最受欢迎的活动
+	const popularActivities = await db
 		.select({
-			rating: feedback.rating,
-			count: sql<number>`count(*)`,
+			activityName: activities.title,
+			registrationCount: sql<number>`count(*)`,
 		})
-		.from(feedback)
-		.groupBy(feedback.rating);
+		.from(registrations)
+		.innerJoin(activities, sql`${activities.id} = ${registrations.activityId}`)
+		.where(sql`${registrations.status} = ${RegistrationStatus.APPROVED}`)
+		.groupBy(activities.id, activities.title)
+		.orderBy(sql`count(*) desc`)
+		.limit(5);
 
 	// 获取最活跃的参与者
 	const topParticipants = await db
@@ -93,12 +97,12 @@ export async function getDashboardStatistics(): Promise<DashboardStatistics> {
 			count: Number(stat.count),
 		})),
 		categoryDistribution: categoryDistribution.map((cat) => ({
-			name: cat.categoryId.toString(), // 这里可能需要额外查询分类名称
+			name: cat.categoryId.toString(),
 			count: Number(cat.count),
 		})),
-		activityRatings: activityRatings.map((rating) => ({
-			rating: rating.rating,
-			count: Number(rating.count),
+		popularActivities: popularActivities.map((activity) => ({
+			activityName: activity.activityName,
+			registrationCount: Number(activity.registrationCount),
 		})),
 		topParticipants: topParticipants.map((user) => ({
 			name: user.name,

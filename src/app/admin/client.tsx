@@ -48,9 +48,9 @@ interface DashboardClientProps {
       name: string;
       count: number;
     }>;
-    activityRatings: Array<{
-      rating: number;
-      count: number;
+    popularActivities: Array<{
+      activityName: string;
+      registrationCount: number;
     }>;
     topParticipants: Array<{
       name: string;
@@ -71,9 +71,9 @@ export function DashboardClient({ stats }: DashboardClientProps) {
     value: cat.count,
   }));
 
-  const ratingData = stats.activityRatings.map((rating) => ({
-    name: `${rating.rating}星`,
-    count: rating.count,
+  const popularActivitiesData = stats.popularActivities.map((activity) => ({
+    name: activity.activityName,
+    count: activity.registrationCount,
   }));
 
   return (
@@ -188,22 +188,31 @@ export function DashboardClient({ stats }: DashboardClientProps) {
             </CardContent>
           </Card>
 
-          {/* 活动评分分布 */}
+          {/* 最受欢迎活动排行 */}
           <Card className='col-span-1'>
             <CardHeader>
-              <CardTitle>活动评分分布</CardTitle>
+              <CardTitle>最受欢迎活动排行</CardTitle>
             </CardHeader>
             <CardContent>
               <div className='h-[250px]'>
-                <ResponsiveContainer width='100%'
+                <ResponsiveContainer 
+                  width='100%'
                   height='100%'>
-                  <BarChart data={ratingData}>
+                  <BarChart 
+                    data={popularActivitiesData}
+                    layout='vertical'>
                     <CartesianGrid strokeDasharray='3 3' />
-                    <XAxis dataKey='name' />
-                    <YAxis />
+                    <XAxis type='number' />
+                    <YAxis 
+                      dataKey='name' 
+                      type='category' 
+                      width={100}
+                      tick={{ fontSize: 12 }} />
                     <Tooltip />
-                    <Bar dataKey='count'
-                      fill='#8884d8' />
+                    <Bar 
+                      dataKey='count' 
+                      fill='#8884d8'
+                      name='报名人数' />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
