@@ -1,3 +1,5 @@
+'use server';
+
 import db from '@/database/neon.db';
 import { comments } from '@/schema/comment.schema';
 import type { Comment, NewComment } from '@/schema/comment.schema';

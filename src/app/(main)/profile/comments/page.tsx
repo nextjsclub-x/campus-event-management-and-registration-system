@@ -30,7 +30,8 @@ export default async function UserCommentsPage({ searchParams }: PageProps) {
       </div>
       <CommentsClient
         comments={response.data}
-        pagination={response.pagination} />
+        pagination={response.pagination}
+        userId={Number(userId)} />
     </div>
   );
 }

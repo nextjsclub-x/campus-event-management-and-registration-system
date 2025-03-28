@@ -1,3 +1,5 @@
+'use server';
+
 import { eq } from 'drizzle-orm';
 import db from '@/database/neon.db';
 import { comments } from '@/schema/comment.schema';
