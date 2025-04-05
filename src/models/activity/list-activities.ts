@@ -9,6 +9,11 @@ import {
 	type Activity,
 } from '@/types/activity.types';
 import type { PaginatedResponse } from '@/types/pagination.types';
+import { getActivityRegistrations } from '@/models/registration/get-activity-registrations';
+
+type ActivityWithRegistrations = Activity & {
+	currentRegistrations: number; // 用于存储当前活动的报名人数
+};
 
 type SearchField = 'title' | 'description' | 'location' | 'all';
 
@@ -23,7 +28,7 @@ export async function listActivities(filters: {
 	order?: 'asc' | 'desc';
 	searchField?: SearchField;
 	keyword?: string;
-}): Promise<PaginatedResponse<Activity>> {
+}): Promise<PaginatedResponse<ActivityWithRegistrations>> {
 	const {
 		status,
 		categoryId,
@@ -120,6 +125,19 @@ export async function listActivities(filters: {
 		.limit(pageSize)
 		.offset(offset);
 
+    const activityWithRegistrations = await Promise.all(
+      activityList.map(async (activity) => {
+        const registrationData = await getActivityRegistrations(activity.id);
+        const activityWithRegistrationCount: ActivityWithRegistrations = {
+          ...activity,
+          currentRegistrations: registrationData.pagination.total, // 报名人数来自 pagination.total
+        };
+        return activityWithRegistrationCount;
+      })
+    );
+  
+
+
 	// 4. 获取总数
 	const [{ count }] = await db
 		.select({
@@ -131,7 +149,7 @@ export async function listActivities(filters: {
 	const totalPages = Math.ceil(count / pageSize);
 
 	return {
-		items: activityList,
+		items: activityWithRegistrations,
 		total: count,
 		totalPages,
 		currentPage: page,
